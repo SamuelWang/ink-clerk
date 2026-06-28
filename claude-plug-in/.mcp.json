@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "inkclerk": {
+      "command": "uv",
+      "args": ["run", "python", "main.py"],
+      "cwd": "${CLAUDE_PLUGIN_ROOT}/mcp"
+    }
+  }
+}

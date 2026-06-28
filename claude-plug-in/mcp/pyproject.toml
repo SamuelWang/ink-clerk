@@ -1,0 +1,16 @@
+[project]
+name = "inkclerk-mcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "diff-match-patch>=20241021",
+    "google-api-python-client>=2.198.0",
+    "google-auth-oauthlib>=1.4.0",
+    "markdownify>=1.2.2",
+    "mcp[cli]>=1.28.0",
+    "pyyaml>=6.0.3",
+    "uuid7>=0.1.0",
+]

@@ -1,0 +1,9 @@
+{
+  "name": "inkclerk",
+  "description": "MCP server and slash commands for AI-first document editing with the InkClerk draft/accept workflow",
+  "version": "0.1.0",
+  "author": {
+    "name": "Samuel Wang",
+    "email": "chieh0919@gmail.com"
+  }
+}

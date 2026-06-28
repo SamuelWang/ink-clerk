@@ -43,7 +43,8 @@ ink-clerk/
 | Run a single JS test | `pnpm --filter <package> test -- <pattern>` |
 | Desktop app | `pnpm --filter desktop tauri dev` |
 | Web API (Python) | `cd apps/web-api && uv run uvicorn src.main:app --reload` |
-| MCP server | `cd claude-plug-in/mcp && uv run python src/main.py` |
+| MCP server | `cd claude-plug-in/mcp && uv run python main.py` |
+| MCP Inspector (test) | `cd claude-plug-in/mcp && uv run mcp dev main.py` |
 
 Rust/Tauri builds go through `apps/desktop/src-tauri/` and use `cargo` directly or via `tauri-cli`.
 
