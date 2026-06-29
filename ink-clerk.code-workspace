@@ -1,0 +1,6 @@
+{
+  "folders": [
+    { "path": "." },
+    { "path": "claude-plug-in/mcp", "name": "MCP Server" }
+  ]
+}
