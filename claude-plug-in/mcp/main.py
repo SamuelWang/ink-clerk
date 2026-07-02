@@ -2,7 +2,7 @@ from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("inkclerk")
 
-# import tools.projects
+import tools.projects  # noqa: F401
 # import tools.documents
 # import tools.drafts
 # import tools.import_google_doc
