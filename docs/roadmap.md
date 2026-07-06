@@ -9,6 +9,7 @@
 - Claude Plug-in sub-project initialized
 - MCP Server tools and resources completed
 - Skills completed
+- Hosted Google OAuth broker service (`apps/web-api` auth router) built and deployed
 - Import Google Docs as a markdown document completed
 
 ## Milestone 2 — Desktop App (v0.2.0)
@@ -21,8 +22,7 @@
 
 ## Milestone 3 — Web API (v0.3.0)
 
-- Web API sub-project initialized
-- `/projects`, `/files`, `/drafts`, `/ai` endpoints completed
+- Web API expanded with `/projects`, `/files`, `/drafts`, `/ai` endpoints
 - PostgreSQL draft storage completed
 
 ## Milestone 4 — Web App (v0.4.0)

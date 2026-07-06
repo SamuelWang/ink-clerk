@@ -80,12 +80,12 @@ Provider-agnostic adapter for the desktop app. `client.ts` exposes a unified `st
 
 ### Web API (`apps/web-api`)
 
-FastAPI backend with four routers: `/projects`, `/files`, `/drafts`, `/ai`. Uses `asyncpg` for PostgreSQL. The `services/ai.py` module calls the Anthropic Python SDK.
+FastAPI backend. In v0.1.0 it implements only an `/auth` router: a hosted Google OAuth broker, deployed on Render, that exchanges authorization codes and refreshes tokens on behalf of the local MCP server (see `claude-plug-in/mcp/tools/import_google_doc.py`) so no end user needs their own Google Cloud OAuth client. The remaining routers — `/projects`, `/files`, `/drafts`, `/ai` — and PostgreSQL-backed (`asyncpg`) draft storage land in Milestone 3 (v0.3.0).
 
 ### Claude Plug-in (`claude-plug-in/`)
 
-MCP server (Python) exposing tools, resources, and prompts. Skill definitions are `.md` files in `skills/`. The plug-in is the v0.1.0 milestone target.
+MCP server (Python) exposing tools, resources, and prompts. Skill definitions are `.md` files in `skills/`. The plug-in is the v0.1.0 milestone target. Google Docs import (`import_google_doc`) depends on the hosted OAuth broker in `apps/web-api` for authentication.
 
 ## Current Milestone
 
-**v0.1.0 — Claude Plug-in**: MCP server tools/resources/prompts + Claude Code skills + Google Docs import as markdown.
+**v0.1.0 — Claude Plug-in**: MCP server tools/resources/prompts + Claude Code skills + hosted Google OAuth broker service (`apps/web-api` `/auth` router, deployed on Render) + Google Docs import as markdown.
