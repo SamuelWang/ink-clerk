@@ -243,3 +243,72 @@ class TestAuthGoogleCallback:
         assert 400 <= response.status_code < 500
         assert response.headers["content-type"].startswith("text/html")
         assert session_id not in auth_module._session_store
+
+
+# ---------------------------------------------------------------------------
+# TestAuthGoogleSession
+# ---------------------------------------------------------------------------
+
+
+class TestAuthGoogleSession:
+    @pytest.fixture(autouse=True)
+    def _clear_session_store(self):
+        auth_module._session_store.clear()
+        yield
+        auth_module._session_store.clear()
+
+    def test_unknown_session_id_returns_pending(self):
+        response = client.get("/auth/google/session/never-seen-session-id")
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "pending"}
+
+    def test_ready_session_returns_stored_token_payload(self, monkeypatch):
+        _configure_oauth_env(monkeypatch)
+        _patch_successful_token_exchange(
+            monkeypatch, access_token="tok-abc", refresh_token="refresh-xyz", expires_in=3600
+        )
+        session_id = "session-123"
+        client.get(
+            "/auth/google/callback",
+            params={"code": "auth-code-abc", "state": session_id},
+        )
+
+        response = client.get(f"/auth/google/session/{session_id}")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "ready"
+        assert body["access_token"] == "tok-abc"
+        assert body["refresh_token"] == "refresh-xyz"
+        assert 3590 <= body["expires_in"] <= 3600
+
+    def test_second_call_after_claim_returns_expired(self, monkeypatch):
+        _configure_oauth_env(monkeypatch)
+        _patch_successful_token_exchange(monkeypatch)
+        session_id = "session-123"
+        client.get(
+            "/auth/google/callback",
+            params={"code": "auth-code-abc", "state": session_id},
+        )
+
+        first = client.get(f"/auth/google/session/{session_id}")
+        second = client.get(f"/auth/google/session/{session_id}")
+
+        assert first.json()["status"] == "ready"
+        assert second.json() == {"status": "expired"}
+
+    def test_session_past_ttl_never_claimed_returns_expired(self):
+        session_id = "stale-session"
+        auth_module._session_store[session_id] = {
+            "status": "ready",
+            "access_token": "fake-access-token",
+            "refresh_token": "fake-refresh-token",
+            "expires_in": 3600,
+            "created_at": time.time() - auth_module.SESSION_TTL_SECONDS - 1,
+        }
+
+        response = client.get(f"/auth/google/session/{session_id}")
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "expired"}

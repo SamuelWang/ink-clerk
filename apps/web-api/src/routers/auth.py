@@ -76,3 +76,28 @@ def google_callback(code: str | None = None, state: str | None = None) -> HTMLRe
         "<html><body><h1>Authentication complete</h1>"
         "<p>You can return to your terminal.</p></body></html>"
     )
+
+
+@router.get("/google/session/{session_id}")
+def google_session(session_id: str) -> dict:
+    entry = _session_store.get(session_id)
+    if entry is None:
+        return {"status": "pending"}
+    if entry["status"] == "expired":
+        return {"status": "expired"}
+
+    age = time.time() - entry["created_at"]
+    if age > SESSION_TTL_SECONDS:
+        _session_store[session_id] = {"status": "expired"}
+        return {"status": "expired"}
+
+    # Single-claim: tombstone now so any future poll for this session_id (a
+    # duplicate retry, or a poll long after this one) sees "expired" instead
+    # of re-issuing these tokens or reverting to "pending".
+    _session_store[session_id] = {"status": "expired"}
+    return {
+        "status": "ready",
+        "access_token": entry["access_token"],
+        "refresh_token": entry["refresh_token"],
+        "expires_in": entry["expires_in"],
+    }
