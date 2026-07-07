@@ -3,9 +3,13 @@ import time
 from datetime import datetime, timezone
 
 from fastapi import APIRouter
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from google.auth.exceptions import RefreshError
+from google.auth.transport.requests import Request as GoogleAuthRequest
+from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from oauthlib.oauth2.rfc6749.errors import OAuth2Error
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/auth")
 
@@ -101,3 +105,32 @@ def google_session(session_id: str) -> dict:
         "refresh_token": entry["refresh_token"],
         "expires_in": entry["expires_in"],
     }
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh")
+def refresh(body: RefreshRequest) -> JSONResponse:
+    creds = Credentials(
+        token=None,
+        refresh_token=body.refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=os.environ["GOOGLE_CLIENT_ID"],
+        client_secret=os.environ["GOOGLE_CLIENT_SECRET"],
+    )
+    try:
+        creds.refresh(GoogleAuthRequest())
+    except RefreshError:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Google rejected the refresh token."},
+        )
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    expires_in = int((creds.expiry - now).total_seconds())
+    payload = {"access_token": creds.token, "expires_in": expires_in}
+    if creds.refresh_token != body.refresh_token:
+        payload["refresh_token"] = creds.refresh_token
+    return JSONResponse(content=payload)

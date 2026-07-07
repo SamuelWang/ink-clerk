@@ -1,8 +1,11 @@
 import time
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi.testclient import TestClient
+from google.auth.exceptions import RefreshError
+from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 
@@ -51,6 +54,31 @@ def _patch_rejected_token_exchange(monkeypatch) -> None:
         raise InvalidGrantError(description="Bad Request")
 
     monkeypatch.setattr(Flow, "fetch_token", _fake_fetch_token)
+
+
+def _patch_successful_refresh(
+    monkeypatch,
+    *,
+    access_token="new-access-token",
+    refresh_token=None,
+    expires_in=3600,
+) -> None:
+    def _fake_refresh(self, request):
+        self.token = access_token
+        self.expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+            seconds=expires_in
+        )
+        if refresh_token is not None:
+            self._refresh_token = refresh_token
+
+    monkeypatch.setattr(Credentials, "refresh", _fake_refresh)
+
+
+def _patch_rejected_refresh(monkeypatch) -> None:
+    def _fake_refresh(self, request):
+        raise RefreshError("invalid_grant: Token has been revoked.")
+
+    monkeypatch.setattr(Credentials, "refresh", _fake_refresh)
 
 
 client = TestClient(app, follow_redirects=False)
@@ -312,3 +340,45 @@ class TestAuthGoogleSession:
 
         assert response.status_code == 200
         assert response.json() == {"status": "expired"}
+
+
+# ---------------------------------------------------------------------------
+# TestAuthRefresh
+# ---------------------------------------------------------------------------
+
+
+class TestAuthRefresh:
+    def test_valid_refresh_token_returns_access_token_and_expires_in(self, monkeypatch):
+        _configure_oauth_env(monkeypatch)
+        _patch_successful_refresh(monkeypatch, access_token="tok-abc", expires_in=3600)
+
+        response = client.post("/auth/refresh", json={"refresh_token": "old-refresh-token"})
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["access_token"] == "tok-abc"
+        assert 3590 <= body["expires_in"] <= 3600
+
+    def test_no_rotation_omits_refresh_token_field(self, monkeypatch):
+        _configure_oauth_env(monkeypatch)
+        _patch_successful_refresh(monkeypatch)
+
+        response = client.post("/auth/refresh", json={"refresh_token": "old-refresh-token"})
+
+        assert "refresh_token" not in response.json()
+
+    def test_rotated_refresh_token_is_included_in_response(self, monkeypatch):
+        _configure_oauth_env(monkeypatch)
+        _patch_successful_refresh(monkeypatch, refresh_token="new-refresh-token")
+
+        response = client.post("/auth/refresh", json={"refresh_token": "old-refresh-token"})
+
+        assert response.json()["refresh_token"] == "new-refresh-token"
+
+    def test_rejected_refresh_token_returns_error_not_500(self, monkeypatch):
+        _configure_oauth_env(monkeypatch)
+        _patch_rejected_refresh(monkeypatch)
+
+        response = client.post("/auth/refresh", json={"refresh_token": "revoked-token"})
+
+        assert 400 <= response.status_code < 500
