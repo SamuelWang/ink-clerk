@@ -10,3 +10,12 @@ dependencies = [
     "httpx>=0.28.1",
     "uvicorn>=0.50.2",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
