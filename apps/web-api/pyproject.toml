@@ -1,0 +1,12 @@
+[project]
+name = "inkclerk-web-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.139.0",
+    "google-auth-oauthlib>=1.4.0",
+    "httpx>=0.28.1",
+    "uvicorn>=0.50.2",
+]
