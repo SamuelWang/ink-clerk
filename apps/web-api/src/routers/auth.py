@@ -32,7 +32,9 @@ def _build_flow() -> Flow:
             "token_uri": "https://oauth2.googleapis.com/token",
         }
     }
-    flow = Flow.from_client_config(client_config, scopes=SCOPES)
+    flow = Flow.from_client_config(
+        client_config, scopes=SCOPES, autogenerate_code_verifier=False
+    )
     flow.redirect_uri = f"{os.environ['PUBLIC_BASE_URL']}/auth/google/callback"
     return flow
 

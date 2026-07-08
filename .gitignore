@@ -7,3 +7,6 @@ __pycache__/
 
 # AI
 .claude
+
+# Env
+.env
