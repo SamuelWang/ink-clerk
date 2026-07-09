@@ -2,10 +2,11 @@ import json
 
 import httpx
 import pytest
+from googleapiclient.errors import HttpError
 
 import tools.import_google_doc as import_google_doc
-from shared.errors import AuthRequiredError, GoogleApiError
-from tools.import_google_doc import get_credentials, parse_doc_id
+from shared.errors import AuthRequiredError, GoogleApiError, PermissionDeniedError
+from tools.import_google_doc import export_doc_html, get_credentials, parse_doc_id
 
 
 class TestParseDocId:
@@ -190,3 +191,76 @@ class TestGetCredentialsCached:
 
         with pytest.raises(AuthRequiredError):
             get_credentials()
+
+
+class _FakeHttpResp:
+    def __init__(self, status: int, reason: str):
+        self.status = status
+        self.reason = reason
+
+
+class _FakeFilesExport:
+    def __init__(self, result: bytes | None, error: HttpError | None):
+        self._result = result
+        self._error = error
+
+    def execute(self) -> bytes:
+        if self._error is not None:
+            raise self._error
+        return self._result
+
+
+class _FakeFiles:
+    def __init__(self, result: bytes | None, error: HttpError | None):
+        self._result = result
+        self._error = error
+
+    def export(self, fileId: str, mimeType: str) -> _FakeFilesExport:
+        return _FakeFilesExport(self._result, self._error)
+
+
+class _FakeDriveService:
+    def __init__(self, result: bytes | None = None, error: HttpError | None = None):
+        self._result = result
+        self._error = error
+
+    def files(self) -> _FakeFiles:
+        return _FakeFiles(self._result, self._error)
+
+
+class TestExportDocHtml:
+    def test_successful_export_returns_decoded_html(self, monkeypatch):
+        captured = {}
+        creds = object()
+
+        def _fake_build(name, version, credentials=None):
+            captured["args"] = (name, version, credentials)
+            return _FakeDriveService(result=b"<html>hello</html>")
+
+        monkeypatch.setattr(import_google_doc, "build", _fake_build)
+
+        html = export_doc_html("doc-123", creds)
+
+        assert html == "<html>hello</html>"
+        assert captured["args"] == ("drive", "v3", creds)
+
+    def test_403_raises_permission_denied(self, monkeypatch):
+        error = HttpError(resp=_FakeHttpResp(403, "Forbidden"), content=b"{}")
+        monkeypatch.setattr(
+            import_google_doc, "build", lambda *a, **k: _FakeDriveService(error=error)
+        )
+
+        with pytest.raises(PermissionDeniedError):
+            export_doc_html("doc-123", object())
+
+    def test_other_http_error_raises_google_api_error_with_status_and_reason(self, monkeypatch):
+        error = HttpError(resp=_FakeHttpResp(500, "Internal Server Error"), content=b"{}")
+        monkeypatch.setattr(
+            import_google_doc, "build", lambda *a, **k: _FakeDriveService(error=error)
+        )
+
+        with pytest.raises(GoogleApiError) as exc_info:
+            export_doc_html("doc-123", object())
+
+        assert "500" in str(exc_info.value)
+        assert "Internal Server Error" in str(exc_info.value)

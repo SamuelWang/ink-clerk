@@ -9,8 +9,10 @@ from uuid import uuid4
 
 import httpx
 from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
-from shared.errors import AuthRequiredError, GoogleApiError
+from shared.errors import AuthRequiredError, GoogleApiError, PermissionDeniedError
 from shared.fs import ensure_dir
 
 _DOC_ID_URL_RE = re.compile(r"/document/d/([a-zA-Z0-9_-]+)")
@@ -128,3 +130,14 @@ def get_credentials() -> Credentials:
         _write_cached_token(token_data)
 
     return Credentials(token=token_data["access_token"])
+
+
+def export_doc_html(doc_id: str, creds: Credentials) -> str:
+    service = build("drive", "v3", credentials=creds)
+    try:
+        html_bytes = service.files().export(fileId=doc_id, mimeType="text/html").execute()
+    except HttpError as e:
+        if e.resp.status == 403:
+            raise PermissionDeniedError(f"No permission to access Google Doc {doc_id}") from e
+        raise GoogleApiError(f"Drive API error {e.resp.status}: {e.reason}") from e
+    return html_bytes.decode("utf-8")
