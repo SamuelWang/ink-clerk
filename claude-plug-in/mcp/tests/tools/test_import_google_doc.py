@@ -6,7 +6,14 @@ from googleapiclient.errors import HttpError
 
 import tools.import_google_doc as import_google_doc
 from shared.errors import AuthRequiredError, GoogleApiError, PermissionDeniedError
-from tools.import_google_doc import export_doc_html, get_credentials, parse_doc_id
+from tools.import_google_doc import (
+    InkClerkConverter,
+    convert_to_markdown,
+    export_doc_html,
+    extract_image_urls,
+    get_credentials,
+    parse_doc_id,
+)
 
 
 class TestParseDocId:
@@ -264,3 +271,100 @@ class TestExportDocHtml:
 
         assert "500" in str(exc_info.value)
         assert "Internal Server Error" in str(exc_info.value)
+
+
+class TestExtractImageUrls:
+    def test_returns_urls_in_document_order(self):
+        html = (
+            "<p>before</p>"
+            '<img src="https://example.com/a.png">'
+            "<p>middle</p>"
+            '<img src="https://example.com/b.png">'
+        )
+        assert extract_image_urls(html) == [
+            "https://example.com/a.png",
+            "https://example.com/b.png",
+        ]
+
+    def test_no_images_returns_empty_list(self):
+        assert extract_image_urls("<p>no images here</p>") == []
+
+    def test_does_not_strip_or_alter_span_styles(self):
+        html = (
+            '<span style="font-family: Arial; color: red;">styled</span>'
+            '<img src="https://example.com/a.png">'
+        )
+        assert extract_image_urls(html) == ["https://example.com/a.png"]
+
+
+class TestInkClerkConverter:
+    def _convert(self, html: str) -> str:
+        return InkClerkConverter(heading_style="atx", bullets="-").convert(html)
+
+    def test_bold(self):
+        assert self._convert("<b>text</b>").strip() == "**text**"
+        assert self._convert("<strong>text</strong>").strip() == "**text**"
+
+    def test_italic(self):
+        assert self._convert("<i>text</i>").strip() == "*text*"
+        assert self._convert("<em>text</em>").strip() == "*text*"
+
+    def test_strikethrough(self):
+        assert self._convert("<s>text</s>").strip() == "~~text~~"
+        assert self._convert("<del>text</del>").strip() == "~~text~~"
+
+    def test_headings_use_atx_not_setext(self):
+        for level in range(1, 7):
+            tag = f"h{level}"
+            md = self._convert(f"<{tag}>Heading</{tag}>").strip()
+            assert md == f"{'#' * level} Heading"
+            assert "===" not in md
+            assert "---" not in md
+
+    def test_table_produces_gfm_syntax(self):
+        html = (
+            "<table><thead><tr><th>A</th><th>B</th></tr></thead>"
+            "<tbody><tr><td>1</td><td>2</td></tr></tbody></table>"
+        )
+        md = self._convert(html)
+        assert "| A | B |" in md
+        assert "| --- | --- |" in md
+        assert "| 1 | 2 |" in md
+
+    def test_ordered_list(self):
+        md = self._convert("<ol><li>first</li><li>second</li></ol>").strip()
+        assert "1. first" in md
+        assert "2. second" in md
+
+    def test_unordered_list(self):
+        md = self._convert("<ul><li>first</li><li>second</li></ul>").strip()
+        assert "- first" in md
+        assert "- second" in md
+
+    def test_span_with_visual_style_preserved_as_inline_html(self):
+        html = '<span style="font-family: Arial; color: red;">styled</span>'
+        md = self._convert(html).strip()
+        assert md == '<span style="font-family: Arial; color: red;">styled</span>'
+
+    def test_span_drops_non_visual_properties(self):
+        html = '<span style="margin: 0; color: red;">styled</span>'
+        md = self._convert(html).strip()
+        assert md == '<span style="color: red;">styled</span>'
+        assert "margin" not in md
+
+    def test_span_with_no_visual_properties_is_unwrapped(self):
+        html = '<span style="margin: 0;">plain</span>'
+        md = self._convert(html).strip()
+        assert md == "plain"
+        assert "<span" not in md
+
+    def test_underline_element_preserved(self):
+        md = self._convert("<u>text</u>").strip()
+        assert md == "<u>text</u>"
+
+
+class TestConvertToMarkdown:
+    def test_matches_direct_converter_invocation(self):
+        html = "<h1>Title</h1><p><b>bold</b> and <u>underlined</u></p>"
+        expected = InkClerkConverter(heading_style="atx", bullets="-").convert(html)
+        assert convert_to_markdown(html) == expected

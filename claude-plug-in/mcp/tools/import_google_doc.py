@@ -8,6 +8,8 @@ from pathlib import Path
 from uuid import uuid4
 
 import httpx
+import markdownify
+from bs4 import BeautifulSoup
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -141,3 +143,29 @@ def export_doc_html(doc_id: str, creds: Credentials) -> str:
             raise PermissionDeniedError(f"No permission to access Google Doc {doc_id}") from e
         raise GoogleApiError(f"Drive API error {e.resp.status}: {e.reason}") from e
     return html_bytes.decode("utf-8")
+
+
+def extract_image_urls(html: str) -> list[str]:
+    soup = BeautifulSoup(html, "html.parser")
+    return [img["src"] for img in soup.find_all("img") if img.get("src")]
+
+
+class InkClerkConverter(markdownify.MarkdownConverter):
+    VISUAL_PROPS = {"color", "background-color", "font-family", "font-size", "text-decoration"}
+
+    def convert_span(self, el, text, parent_tags):
+        style = el.get("style", "")
+        kept = [
+            p.strip() for p in style.split(";")
+            if p.strip() and p.strip().split(":")[0].strip() in self.VISUAL_PROPS
+        ]
+        if kept:
+            return f'<span style="{"; ".join(kept)};">{text}</span>'
+        return text
+
+    def convert_u(self, el, text, parent_tags):
+        return f"<u>{text}</u>"
+
+
+def convert_to_markdown(html: str) -> str:
+    return InkClerkConverter(heading_style="atx", bullets="-").convert(html)
