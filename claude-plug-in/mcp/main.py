@@ -5,7 +5,7 @@ mcp = FastMCP("inkclerk")
 import tools.projects  # noqa: F401
 import tools.documents  # noqa: F401
 import tools.drafts  # noqa: F401
-# import tools.import_google_doc
+import tools.import_google_doc  # noqa: F401
 # import resources.resources
 # import prompts.prompts
 

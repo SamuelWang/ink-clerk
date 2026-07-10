@@ -15,6 +15,7 @@ from shared.fs import (
     resolve_doc,
     resolve_project,
     slugify,
+    truncate_basename,
 )
 
 
@@ -206,3 +207,36 @@ class TestEnsureDir:
         ensure_dir(target)  # must not raise
 
         assert target.is_dir()
+
+
+# ---------------------------------------------------------------------------
+# truncate_basename
+# ---------------------------------------------------------------------------
+
+
+class TestTruncateBasename:
+    def test_short_name_unchanged(self):
+        assert truncate_basename("photo.png") == "photo.png"
+
+    def test_ascii_name_over_255_bytes_truncated_with_extension_preserved(self):
+        name = ("a" * 300) + ".png"
+        result = truncate_basename(name)
+
+        assert len(result.encode("utf-8")) <= 255
+        assert result.endswith(".png")
+
+    def test_cjk_name_truncated_without_splitting_multibyte_char(self):
+        name = ("會" * 200) + ".png"
+        result = truncate_basename(name)
+
+        encoded = result.encode("utf-8")
+        assert len(encoded) <= 255
+        assert encoded.decode("utf-8") == result
+        assert result.endswith(".png")
+
+    def test_preserves_arbitrary_extension(self):
+        name = ("a" * 300) + ".jpeg"
+        result = truncate_basename(name)
+
+        assert result.endswith(".jpeg")
+        assert len(result.encode("utf-8")) <= 255

@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from pathlib import Path
 
@@ -52,3 +53,19 @@ def draft_path_for(project_path: Path, rel_path: str) -> Path:
 
 def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
+
+
+def truncate_basename(name: str, max_bytes: int = 255) -> str:
+    stem, ext = os.path.splitext(name)
+    ext_bytes = ext.encode("utf-8")
+    budget = max_bytes - len(ext_bytes)
+    stem_bytes = stem.encode("utf-8")
+    if len(stem_bytes) <= budget:
+        return name
+    truncated = stem_bytes[:budget]
+    while truncated:
+        try:
+            return truncated.decode("utf-8") + ext
+        except UnicodeDecodeError:
+            truncated = truncated[:-1]
+    return ext

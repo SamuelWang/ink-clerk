@@ -476,6 +476,7 @@ dependencies = [
     { name = "markdownify" },
     { name = "mcp", extra = ["cli"] },
     { name = "pyyaml" },
+    { name = "requests" },
     { name = "uuid7" },
 ]
 
@@ -494,6 +495,7 @@ requires-dist = [
     { name = "markdownify", specifier = ">=1.2.2" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.28.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "requests", specifier = ">=2.32.0" },
     { name = "uuid7", specifier = ">=0.1.0" },
 ]
 
