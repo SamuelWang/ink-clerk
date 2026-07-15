@@ -29,7 +29,7 @@ pnpm install   # from the repo root
 
 ## Deployment
 
-Deployed as a Render static site (`inkclerk-web` service in the root `render.yaml`), built alongside `inkclerk-web-api` from the same Blueprint. The build command pins the exact pnpm version via corepack, then runs `pnpm install --frozen-lockfile && pnpm turbo build --filter=web`, publishing `apps/web/dist`. A `/* → /index.html` rewrite route is required so `/privacy` and `/terms` resolve correctly on direct load or refresh, since routing is client-side.
+Deployed as a Render static site (`inkclerk-web` service in the root `render.yaml`), built alongside `inkclerk-web-api` from the same Blueprint. Render auto-activates the pnpm version from the root `package.json`'s `packageManager` field, then the build runs `pnpm install --frozen-lockfile && pnpm turbo build --filter=web`, publishing `apps/web/dist`. A `/* → /index.html` rewrite route is required so `/privacy` and `/terms` resolve correctly on direct load or refresh, since routing is client-side.
 
 ## Out of scope (for now)
 
