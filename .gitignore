@@ -10,3 +10,10 @@ __pycache__/
 
 # Env
 .env
+
+# Node
+node_modules/
+dist/
+.turbo/
+*.local
+.DS_Store

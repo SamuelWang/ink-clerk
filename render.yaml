@@ -13,3 +13,12 @@ services:
         sync: false
       - key: PUBLIC_BASE_URL
         sync: false
+  - type: web
+    name: inkclerk-web
+    runtime: static
+    buildCommand: corepack enable && corepack prepare pnpm@10.33.0 --activate && pnpm install --frozen-lockfile && pnpm turbo build --filter=web
+    staticPublishPath: apps/web/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
