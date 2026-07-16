@@ -129,7 +129,7 @@ class TestAuthGoogleStart:
         qs = parse_qs(urlparse(response.headers["location"]).query)
         assert qs["redirect_uri"] == ["https://inkclerk-auth.example.com/auth/google/callback"]
 
-    def test_redirect_includes_both_readonly_scopes(self, monkeypatch):
+    def test_redirect_includes_drive_readonly_scope(self, monkeypatch):
         _configure_oauth_env(monkeypatch)
 
         response = client.get(
@@ -138,8 +138,7 @@ class TestAuthGoogleStart:
 
         qs = parse_qs(urlparse(response.headers["location"]).query)
         scopes = qs["scope"][0].split()
-        assert "https://www.googleapis.com/auth/documents.readonly" in scopes
-        assert "https://www.googleapis.com/auth/drive.readonly" in scopes
+        assert scopes == ["https://www.googleapis.com/auth/drive.readonly"]
 
     def test_state_equals_session_id(self, monkeypatch):
         _configure_oauth_env(monkeypatch)

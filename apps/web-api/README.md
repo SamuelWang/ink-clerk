@@ -1,6 +1,6 @@
 # inkclerk-web-api
 
-FastAPI backend implementing a hosted Google OAuth broker (see root `CLAUDE.md`). It exists so that `import_google_doc` users don't need to set up their own Google Cloud OAuth client — this service brokers `documents.readonly` + `drive.readonly` tokens on behalf of the local MCP server (`claude-plug-in/mcp/tools/import_google_doc.py`).
+FastAPI backend implementing a hosted Google OAuth broker (see root `CLAUDE.md`). It exists so that `import_google_doc` users don't need to set up their own Google Cloud OAuth client — this service brokers `drive.readonly` tokens on behalf of the local MCP server (`claude-plug-in/mcp/tools/import_google_doc.py`).
 
 ## Endpoints
 

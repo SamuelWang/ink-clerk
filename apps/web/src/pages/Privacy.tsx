@@ -13,9 +13,9 @@ export default function Privacy() {
 
       <h2>What we request from Google</h2>
       <p>
-        The broker requests exactly two read-only OAuth scopes:{' '}
-        <code>documents.readonly</code> and <code>drive.readonly</code>. It never requests your
-        name, email, profile picture, or any write access to your Google account.
+        The broker requests exactly one read-only OAuth scope: <code>drive.readonly</code>. It
+        never requests your name, email, profile picture, or any write access to your Google
+        account.
       </p>
 
       <h2>How the flow works</h2>

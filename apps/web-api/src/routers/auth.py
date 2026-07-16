@@ -14,7 +14,6 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/auth")
 
 SCOPES = [
-    "https://www.googleapis.com/auth/documents.readonly",
     "https://www.googleapis.com/auth/drive.readonly",
 ]
 
