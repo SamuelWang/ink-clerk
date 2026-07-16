@@ -59,22 +59,13 @@ main {
   line-height: 155%;
 }
 
-.install {
+.features {
   width: 100%;
-}
-
-.install pre {
   text-align: left;
-  background: var(--code-bg);
-  border-radius: 8px;
-  padding: 16px 20px;
-  overflow-x: auto;
 }
 
-.install pre code {
-  background: none;
-  padding: 0;
-  white-space: pre;
+.features p {
+  margin: 8px 0;
 }
 
 .page.legal {
