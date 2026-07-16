@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import logo from '../assets/logo.png'
 
 export default function Home() {
@@ -9,6 +10,12 @@ export default function Home() {
         InkClerk is an AI-first clerical work platform built around a single contract: AI edits
         land as drafts, you review the diff, and only your explicit accept turns a draft into the
         formal version of your document. No AI edit is ever applied silently.
+      </p>
+      <p>
+        One way to start a draft is by importing an existing Google Doc. That import asks for
+        read-only access to your Google Docs and Drive — just enough to fetch the document you
+        choose, nothing else. See the <Link to="/privacy">Privacy Policy</Link> for exactly
+        what's requested and how it's handled.
       </p>
       <div className="install">
         <h2>Install the Claude Code plugin</h2>

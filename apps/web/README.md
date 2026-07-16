@@ -31,6 +31,8 @@ pnpm install   # from the repo root
 
 Deployed as a Render static site (`inkclerk-web` service in the root `render.yaml`), built alongside `inkclerk-web-api` from the same Blueprint. Render auto-activates the pnpm version from the root `package.json`'s `packageManager` field, then the build runs `pnpm install --frozen-lockfile && pnpm turbo build --filter=web`, publishing `apps/web/dist`. A `/* → /index.html` rewrite route is required so `/privacy` and `/terms` resolve correctly on direct load or refresh, since routing is client-side.
 
+After `vite build`, `scripts/prerender.mjs` renders each route (`src/entry-server.tsx` + `react-dom/server`) into real static HTML at `dist/index.html`, `dist/privacy/index.html`, and `dist/terms/index.html`, so the raw HTTP response has visible content without running JS — this matters for crawlers and for Google's OAuth branding reviewer. The client bundle still loads and takes over normally; nothing here is hydration-sensitive since `main.tsx` uses `createRoot`, not `hydrateRoot`.
+
 ## Out of scope (for now)
 
 The drafts/editor UI — the rest of Milestone 4 — is not implemented here yet.
