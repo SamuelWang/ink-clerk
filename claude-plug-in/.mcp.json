@@ -5,7 +5,8 @@
       "args": ["run", "python", "main.py"],
       "cwd": "${CLAUDE_PLUGIN_ROOT}/mcp",
       "env": {
-        "INKCLERK_AUTH_SERVICE_URL": "https://inkclerk-web-api.onrender.com"
+        "INKCLERK_WEB_APP_URL": "https://inkclerk-web.onrender.com",
+        "INKCLERK_WEB_API_URL": "https://inkclerk-web-api.onrender.com"
       }
     }
   }

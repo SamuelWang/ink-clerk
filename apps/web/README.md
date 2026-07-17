@@ -5,10 +5,11 @@ The InkClerk public web app. In v0.1.0 it is a static homepage, privacy policy, 
 ## Pages
 
 - `/` (`src/pages/Home.tsx`) — product pitch (the AI-first draft/accept workflow) and the Claude Code plugin install command.
-- `/privacy` (`src/pages/Privacy.tsx`) — describes exactly what the OAuth broker collects and how long it's retained. Its claims are sourced directly from `apps/web-api/src/routers/auth.py` (scopes, session TTL, single-claim behavior) — if that service's data handling changes, this page needs to change with it.
+- `/privacy` (`src/pages/Privacy.tsx`) — describes exactly what the Google Doc import flow collects and how long it's retained. Its claims are sourced directly from `src/pages/ImportGoogleDoc.tsx` and `apps/web-api/src/routers/import_session.py` (scopes, session TTL, single-claim behavior) — if that flow's data handling changes, this page needs to change with it.
 - `/terms` (`src/pages/Terms.tsx`) — AS-IS/no-warranty terms and a link to the repo's AGPL-3.0 `LICENSE`.
+- `/import/google-doc` (`src/pages/ImportGoogleDoc.tsx`) — the client-side Google sign-in + Picker page the local MCP server opens in the system browser during `import_google_doc`. Obtains a `drive.file` access token directly from Google (Google Identity Services, no client secret), drives the Google Picker, then hands the result off to `apps/web-api`'s `/import/google-doc` relay for the local process to pick up. Not part of the prerendered route list below — it's a transient, session-bound handoff page, not marketing content.
 
-All three routes share `src/components/Layout.tsx` (header with logo/nav, footer with contact email) via `react-router-dom`'s `<Outlet/>`.
+All routes share `src/components/Layout.tsx` (header with logo/nav, footer with contact email) via `react-router-dom`'s `<Outlet/>`.
 
 ## Scripts
 

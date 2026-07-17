@@ -104,22 +104,18 @@ class TestCreateDocumentPrompt:
 
 
 class TestImportGoogleDocPrompt:
-    def test_messages_carry_url_and_project_name(self, tmp_path, monkeypatch):
+    def test_messages_carry_project_name(self, tmp_path, monkeypatch):
         monkeypatch.setattr(fs, "PROJECTS_ROOT", tmp_path)
 
-        result = prompts.import_google_doc(
-            "https://docs.google.com/document/d/abc123/edit", "Alpha"
-        )
+        result = prompts.import_google_doc("Alpha")
 
         combined = "\n".join(m.content.text for m in result)
-        assert "https://docs.google.com/document/d/abc123/edit" in combined
         assert "Alpha" in combined
 
     def test_optional_filename_and_subdirectory_included_when_given(self, tmp_path, monkeypatch):
         monkeypatch.setattr(fs, "PROJECTS_ROOT", tmp_path)
 
         result = prompts.import_google_doc(
-            "https://docs.google.com/document/d/abc123/edit",
             "Alpha",
             filename="meeting-notes",
             subdirectory="notes",
@@ -132,9 +128,7 @@ class TestImportGoogleDocPrompt:
     def test_optional_args_omitted_when_not_given(self, tmp_path, monkeypatch):
         monkeypatch.setattr(fs, "PROJECTS_ROOT", tmp_path)
 
-        result = prompts.import_google_doc(
-            "https://docs.google.com/document/d/abc123/edit", "Alpha"
-        )
+        result = prompts.import_google_doc("Alpha")
 
         combined = "\n".join(m.content.text for m in result)
         assert "Filename:" not in combined

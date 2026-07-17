@@ -1,26 +1,24 @@
 # inkclerk-web-api
 
-FastAPI backend implementing a hosted Google OAuth broker (see root `CLAUDE.md`). It exists so that `import_google_doc` users don't need to set up their own Google Cloud OAuth client — this service brokers `drive.readonly` tokens on behalf of the local MCP server (`claude-plug-in/mcp/tools/import_google_doc.py`).
+FastAPI backend. In v0.1.0 this service is a small, secret-free relay for the Google Doc import handoff (see root `CLAUDE.md`). It never talks to Google and never holds a Google client secret — the browser (`apps/web`'s `/import/google-doc` page) obtains a `drive.file`-scoped access token and picks the target document entirely client-side, via Google Identity Services and the Google Picker. This service just relays the result — `{access_token, expires_in, file_id, file_name}` — from that browser page to the local MCP server (`claude-plug-in/mcp/tools/import_google_doc.py`), which has no public endpoint of its own for the browser to reach.
+
+Its other planned routers (`/projects`, `/files`, `/drafts`, `/ai`) and PostgreSQL-backed draft storage remain out of scope until Milestone 3.
 
 ## Endpoints
 
-- `GET /auth/google/start?session_id=...` — redirects (302) to Google's consent screen, with `state` set to `session_id`.
-- `GET /auth/google/callback?code=...&state=...` — exchanges the authorization code for tokens and stores them in an in-memory session store keyed by `state` (5-minute TTL); returns an HTML success or error page.
-- `GET /auth/google/session/{session_id}` — polled by the client to retrieve the outcome: `{"status": "pending"}`, `{"status": "ready", "access_token", "refresh_token", "expires_in"}`, or `{"status": "expired"}`. Single-claim: a `"ready"` response can only be read once — any later poll for the same `session_id` returns `"expired"`.
-- `POST /auth/refresh` — body `{"refresh_token": "..."}`; returns `{"access_token", "expires_in"}` (plus a rotated `refresh_token` if Google issued a new one), or a 400 error payload if Google rejects the refresh token.
+- `POST /import/google-doc/session/{session_id}/complete` — body `{"access_token": "...", "expires_in": ..., "file_id": "...", "file_name": "..."}`, called by the `apps/web` Picker page's own JS once the user signs in and picks a document. Stores the payload in an in-memory session store keyed by `session_id`, status `"ready"`.
+- `GET /import/google-doc/session/{session_id}` — polled by the local MCP tool to retrieve the outcome: `{"status": "pending"}` (not yet completed), `{"status": "ready", "access_token", "expires_in", "file_id", "file_name"}`, or `{"status": "expired"}`. Single-claim: a `"ready"` response can only be read once — any later poll for the same `session_id` returns `"expired"`.
 
 ## Environment variables
 
-- `GOOGLE_CLIENT_ID` — OAuth client ID from Google Cloud Console.
-- `GOOGLE_CLIENT_SECRET` — OAuth client secret from Google Cloud Console.
-- `PUBLIC_BASE_URL` — this service's own public URL, used to build the OAuth redirect URI: `{PUBLIC_BASE_URL}/auth/google/callback`.
+- `WEB_APP_ORIGIN` — the deployed `apps/web` origin, used to restrict CORS on `POST /import/google-doc/session/{session_id}/complete` (that request is cross-origin, from `apps/web`'s origin to this service). Defaults to `http://localhost:5173` for local development.
 
 ## Setup
 
 ```bash
 uv sync
 cp .env.example .env
-# then fill in GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / PUBLIC_BASE_URL in .env
+# then fill in WEB_APP_ORIGIN in .env if it differs from the default
 ```
 
 ## Run
@@ -37,4 +35,4 @@ uv run pytest
 
 ## Deployment
 
-Deployed as a Render web service (Docker runtime) pointing at this directory's `Dockerfile`, per the root `render.yaml`. The container's `CMD` binds to `${PORT:-8000}`, honoring Render's injected `$PORT`. `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `PUBLIC_BASE_URL` are set manually in the Render dashboard (not synced from `render.yaml`).
+Deployed as a Render web service (Docker runtime) pointing at this directory's `Dockerfile`, per the root `render.yaml`. The container's `CMD` binds to `${PORT:-8000}`, honoring Render's injected `$PORT`. `WEB_APP_ORIGIN` is set manually in the Render dashboard (not synced from `render.yaml`).

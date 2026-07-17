@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import logo from '../assets/logo.png'
 
 export default function Home() {
@@ -12,21 +11,21 @@ export default function Home() {
         your document until you review it and explicitly accept it.
       </p>
       <p>
-        InkClerk is built around a single contract: AI edits land as drafts, you review the diff,
-        and only your explicit accept turns a draft into the formal version of your document. No
-        AI edit is ever applied silently.
-      </p>
-      <p>
-        One way to start a draft is by importing an existing Google Doc. That import asks for
-        read-only access to your Google Docs and Drive — just enough to fetch the document you
-        choose, nothing else. See the <Link to="/privacy">Privacy Policy</Link> for exactly
-        what's requested and how it's handled.
+        InkClerk is built around a single contract: AI edits land as drafts, you review the
+        changes, and only your explicit accept turns a draft into the formal version of your
+        document. No AI edit is ever applied silently.
       </p>
       <div className="features">
         <h2>What InkClerk does</h2>
         <p>
-          Available now: import a Google Doc, get AI help editing it through Claude, and review
-          every AI change as a draft before it's accepted into your document.
+          Your documents are plain Markdown files, stored locally on your own disk and organized
+          into projects, that you fully own — not a proprietary format locked into InkClerk.
+          Available now, as an add-on inside
+          Claude Code (Anthropic's AI coding assistant) — InkClerk isn't its own app yet, you use
+          it there. You can import an existing Google Doc as a starting point (picked through
+          Google's own file picker, so InkClerk only ever gets access to the one document you
+          choose), ask for an edit to any document, and review each proposed change as a draft:
+          accept it to make it official, or reject it to leave your document untouched.
         </p>
         <p>
           Planned: a desktop app with a full document editor and project/file management, a web

@@ -80,12 +80,12 @@ Provider-agnostic adapter for the desktop app. `client.ts` exposes a unified `st
 
 ### Web API (`apps/web-api`)
 
-FastAPI backend. In v0.1.0 it implements only an `/auth` router: a hosted Google OAuth broker, deployed on Render, that exchanges authorization codes and refreshes tokens on behalf of the local MCP server (see `claude-plug-in/mcp/tools/import_google_doc.py`) so no end user needs their own Google Cloud OAuth client. The remaining routers — `/projects`, `/files`, `/drafts`, `/ai` — and PostgreSQL-backed (`asyncpg`) draft storage land in Milestone 3 (v0.3.0).
+FastAPI backend. In v0.1.0 it implements only an `/import/google-doc` router: a small, secret-free relay, deployed on Render, that hands off a `drive.file` access token and picked-file selection from the browser (`apps/web`'s `/import/google-doc` page, where the user signs in with Google and picks the document entirely client-side via Google Identity Services and the Google Picker) to the local MCP server (see `claude-plug-in/mcp/tools/import_google_doc.py`), which has no public endpoint of its own for the browser to reach. This service never talks to Google and never holds a Google client secret. The remaining routers — `/projects`, `/files`, `/drafts`, `/ai` — and PostgreSQL-backed (`asyncpg`) draft storage land in Milestone 3 (v0.3.0).
 
 ### Claude Plug-in (`claude-plug-in/`)
 
-MCP server (Python) exposing tools, resources, and prompts. Skill definitions are `.md` files in `skills/`. The plug-in is the v0.1.0 milestone target. Google Docs import (`import_google_doc`) depends on the hosted OAuth broker in `apps/web-api` for authentication.
+MCP server (Python) exposing tools, resources, and prompts. Skill definitions are `.md` files in `skills/`. The plug-in is the v0.1.0 milestone target. Google Docs import (`import_google_doc`) opens a browser to `apps/web`'s `/import/google-doc` page for the user to sign in with Google and pick the document, then polls the relay in `apps/web-api` for the result.
 
 ## Current Milestone
 
-**v0.1.0 — Claude Plug-in**: MCP server tools/resources/prompts + Claude Code skills + hosted Google OAuth broker service (`apps/web-api` `/auth` router, deployed on Render) + Google Docs import as markdown.
+**v0.1.0 — Claude Plug-in**: MCP server tools/resources/prompts + Claude Code skills + client-side Google Picker import flow (`apps/web` `/import/google-doc` page + `apps/web-api` `/import/google-doc` relay router, deployed on Render) + Google Docs import as markdown.

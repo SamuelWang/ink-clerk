@@ -7,11 +7,7 @@ services:
     dockerContext: .
     plan: free
     envVars:
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: PUBLIC_BASE_URL
+      - key: WEB_APP_ORIGIN
         sync: false
   - type: web
     name: inkclerk-web

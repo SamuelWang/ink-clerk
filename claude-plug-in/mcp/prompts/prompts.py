@@ -48,15 +48,19 @@ def create_document(project_name: str, brief: str) -> list[Message]:
 
 @mcp.prompt()
 def import_google_doc(
-    google_doc_url: str, project_name: str, filename: str = "", subdirectory: str = ""
+    project_name: str, filename: str = "", subdirectory: str = ""
 ) -> list[Message]:
-    lines = [f"Google Doc: {google_doc_url}", f"Target project: {project_name}"]
+    lines = [f"Target project: {project_name}"]
     if filename:
         lines.append(f"Filename: {filename}")
     if subdirectory:
         lines.append(f"Subdirectory: {subdirectory}")
     lines.append("")
-    lines.append("Call import_google_doc with these parameters to import it.")
+    lines.append(
+        "Call import_google_doc with these parameters to import it. This opens a "
+        "browser window for the user to sign in with Google and pick the document "
+        "via the Google Picker."
+    )
     task = "\n".join(lines)
     return [UserMessage(CONTRACT_MESSAGE), UserMessage(task)]
 

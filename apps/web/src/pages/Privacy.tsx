@@ -2,49 +2,28 @@ export default function Privacy() {
   return (
     <article className="page legal">
       <h1>Privacy Policy</h1>
-      <p className="effective-date">Effective date: July 14, 2026</p>
+      <p className="effective-date">Effective date: July 17, 2026</p>
 
       <p>
-        This page describes exactly what the InkClerk Google Docs import feature collects, where
-        it goes, and how long it lives. InkClerk's Google OAuth broker (a small hosted service,
-        <code>apps/web-api</code>) exists for one purpose: to let you import a Google Doc without
-        needing to set up your own Google Cloud OAuth client.
+        This page describes exactly what InkClerk's Google Docs import feature collects, why, and
+        how long it's kept.
       </p>
 
-      <h2>What we request from Google</h2>
+      <h2>What we access</h2>
       <p>
-        The broker requests exactly one read-only OAuth scope: <code>drive.readonly</code>. It
-        never requests your name, email, profile picture, or any write access to your Google
-        account.
+        When you import a Google Doc, you pick the specific document yourself through Google's
+        own file picker. InkClerk only ever gets access to that one document &mdash; never
+        general access to your Google Drive, and never your name, email, profile picture, or any
+        write access to your Google account.
       </p>
 
-      <h2>How the flow works</h2>
+      <h2>How long we keep it</h2>
       <p>
-        When you run the InkClerk plugin's Google Docs import, it opens your browser to our
-        broker, you sign in and consent directly with Google, and Google redirects back to the
-        broker with a one-time authorization code.
-      </p>
-
-      <h2>What the broker stores, and for how long</h2>
-      <p>
-        The broker holds the resulting access and refresh tokens in an in-memory session store
-        only &mdash; a plain, in-process data structure, not a database. Each entry is keyed by a
-        random session id and is deleted the first time it is read (single-claim): a repeat or
-        late request for the same session id afterward sees "expired," not your tokens again. If
-        never claimed, the entry is dropped automatically after five minutes. Nothing is ever
-        written to disk on the broker, so restarting the service erases all of this state
-        instantly.
-      </p>
-      <p>
-        The token-refresh endpoint is stateless: it does not touch the session store at all. It
-        simply forwards your refresh token to Google's own token endpoint and returns the result.
-      </p>
-
-      <h2>Where your tokens actually live long-term</h2>
-      <p>
-        Your access token, refresh token, and expiry are cached only on your own machine, at{' '}
-        <code>~/.config/inkclerk/google-token.json</code>. InkClerk's servers never persist these
-        long-term &mdash; once a session is claimed, the broker has nothing left to store.
+        Your Google access is cached only on your own machine. You sign in and pick the document
+        directly with Google, in your browser &mdash; InkClerk's servers are never part of that
+        exchange and never see your Google credentials. They only relay a momentary, one-time
+        handoff of the document you picked from your browser back to your own machine, and don't
+        keep a permanent copy of your Google access afterward.
       </p>
 
       <h2>What we don't collect</h2>
