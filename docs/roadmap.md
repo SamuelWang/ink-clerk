@@ -12,7 +12,7 @@
 - Hosted Google OAuth broker service (`apps/web-api` auth router) built and deployed
 - Import Google Docs as a markdown document completed
 
-## Milestone 2 — Desktop App (v0.2.0)
+## Milestone 2 — Desktop App
 
 - Desktop App sub-project initialized
 - Shared packages implemented (`packages/editor`, `packages/ui`, `packages/ai`)
@@ -20,18 +20,18 @@
 - Editor (TipTap, WYSIWYG ↔ raw markdown toggle) completed
 - Draft/accept AI edit workflow completed
 
-## Milestone 3 — Web API (v0.3.0)
+## Milestone 3 — Web API
 
 - Web API expanded with `/projects`, `/files`, `/drafts`, `/ai` endpoints
 - PostgreSQL draft storage completed
 
-## Milestone 4 — Web App (v0.4.0)
+## Milestone 4 — Web App
 
 - Web App sub-project initialized
 - Projects and files management features completed
 - Draft/accept AI edit workflow completed
 
-## Milestone 5 — Sync (v0.5.0)
+## Milestone 5 — Sync
 
 - Desktop-to-cloud sync implemented
 - Cloud-to-desktop sync implemented
