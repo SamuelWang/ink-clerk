@@ -194,6 +194,14 @@ Images are referenced with `./`-prefixed relative paths:
 > ![圖片](./%E4%BC%9A%E8%AE%AE%E8%AE%B0%E5%BD%95-assets/%E5%9B%BE%E7%89%87.png)
 > ```
 > The asset-attach flow in the app should always write percent-encoded paths into `.md` files while keeping actual filenames as raw Unicode on disk. Additionally, note that the 255-byte filesystem limit applies to **bytes not characters** — each CJK character consumes 3 bytes in UTF-8, so the truncation logic for long basenames kicks in after ~85 Chinese characters instead of ~255 ASCII characters.
+>
+> | Character type | Bytes per char | Max chars in 255-byte name |
+> |---|---|---|
+> | ASCII | 1 | 255 |
+> | CJK (most common) | 3 | ~85 |
+> | Emoji (4-byte) | 4 | ~63 |
+>
+> The truncation helper encodes the candidate basename to UTF-8, truncates the byte string to leave room for the `.md` extension (251 bytes max for the stem), then decodes back to a string, dropping any incomplete UTF-8 sequence at the tail.
 
 ## Draft/Accept Workflow Design
 
@@ -204,3 +212,26 @@ Implemented once in `packages/editor`; reused by both surfaces.
 3. When a draft exists, the editor opens in **diff mode**: `DraftAddition` / `DraftDeletion` TipTap marks highlight changes computed by `diff-match-patch`.
 4. User actions: **Accept all** (draft replaces formal) or **Reject all** (draft discarded). Individual hunk accept/reject is a future enhancement.
 5. The editor toggles between WYSIWYG and raw markdown modes; both modes respect the draft layer.
+
+The draft for a document mirrors the document's path relative to the project root, placed under `.inkclerk/drafts/`:
+
+```
+~/Documents/InkClerk/meeting-notes/
+├── .inkclerk/
+│   ├── project.json
+│   └── drafts/
+│       ├── 2026-06-kickoff.md       ← draft for meeting-notes/2026-06-kickoff.md
+│       └── q3-planning/
+│           └── roadmap.md           ← draft for meeting-notes/q3-planning/roadmap.md
+├── 2026-06-kickoff.md               ← formal version (has frontmatter)
+├── 2026-06-kickoff-assets/
+│   └── diagram.png
+└── q3-planning/
+    └── roadmap.md                   ← formal version (has frontmatter)
+```
+
+Key rules:
+- Draft files carry **no frontmatter** — body content only.
+- The `.inkclerk/drafts/` subtree is created lazily on first draft write.
+- Accepting or rejecting a draft deletes the draft file afterward.
+- Accepting a draft reads the original formal file's `id` and `created` fields and re-injects them (with updated `lastModified`) into the accepted content before writing.
