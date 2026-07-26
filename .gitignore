@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+
+# AI
+.claude
+
+# Env
+.env
+
+# Node
+node_modules/
+dist/
+.turbo/
+*.local
+.DS_Store

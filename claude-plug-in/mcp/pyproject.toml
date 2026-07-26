@@ -1,0 +1,27 @@
+[project]
+name = "inkclerk-mcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "diff-match-patch>=20241021",
+    "google-api-python-client>=2.198.0",
+    "google-auth>=2.40.0",
+    "httpx>=0.28.0",
+    "markdownify>=1.2.2",
+    "mcp[cli]>=1.28.0",
+    "pyyaml>=6.0.3",
+    "requests>=2.32.0",
+    "uuid7>=0.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

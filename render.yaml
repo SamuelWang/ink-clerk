@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: inkclerk-web-api
+    runtime: docker
+    rootDir: apps/web-api
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: WEB_APP_ORIGIN
+        sync: false
+  - type: web
+    name: inkclerk-web
+    runtime: static
+    buildCommand: pnpm install --frozen-lockfile && pnpm turbo build --filter=web
+    staticPublishPath: apps/web/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
