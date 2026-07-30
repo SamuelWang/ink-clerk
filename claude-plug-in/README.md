@@ -20,12 +20,12 @@ claude-plug-in/
 │   └── plugin.json        # plugin manifest (name, description, version, author)
 ├── .mcp.json               # wires the MCP server into the plugin
 ├── mcp/
-│   ├── main.py              # FastMCP("inkclerk") instance + tool/resource/prompt registration
+│   ├── main.py              # imports the shared FastMCP instance, registers tools/resources/prompts
 │   ├── pyproject.toml
 │   ├── tools/                # create_project, create_document, propose_edit, import_google_doc, ...
 │   ├── resources/             # inkclerk://... JSON resource dispatcher
 │   ├── prompts/                # MCP Prompts for Claude Desktop App users
-│   ├── shared/                  # fs/frontmatter/error helpers
+│   ├── shared/                  # FastMCP instance, fs/frontmatter/error helpers
 │   └── tests/                    # pytest suite
 └── skills/
     ├── import-google-doc/SKILL.md
@@ -177,8 +177,7 @@ Desktop's own config instead:
   "mcpServers": {
     "inkclerk": {
       "command": "uv",
-      "args": ["run", "python", "main.py"],
-      "cwd": "/absolute/path/to/ink-clerk/claude-plug-in/mcp",
+      "args": ["run", "--directory", "/absolute/path/to/ink-clerk/claude-plug-in/mcp", "python", "main.py"],
       "env": {
         "INKCLERK_WEB_APP_URL": "https://inkclerk-web.onrender.com",
         "INKCLERK_WEB_API_URL": "https://inkclerk-web-api.onrender.com"
@@ -188,7 +187,7 @@ Desktop's own config instead:
 }
 ```
 
-Use a Windows-style `cwd` (e.g. `C:\Users\<you>\ink-clerk\claude-plug-in\mcp`) on that platform.
+Use a Windows-style path after `--directory` (e.g. `C:\Users\<you>\ink-clerk\claude-plug-in\mcp`) on that platform.
 Restart Claude Desktop, confirm the `inkclerk` server connects, and that the four prompt
 templates (`edit_document`, `create_document`, `import_google_doc`, `accept_draft`) are
 selectable. There's no slash-command picker or `/mcp` status screen on Desktop — this is the
