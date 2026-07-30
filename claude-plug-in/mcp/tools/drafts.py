@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from mcp.types import ToolAnnotations
 
-from main import mcp
+from shared.mcp_instance import mcp
 from shared.errors import NoDraftError
 from shared.fs import draft_path_for, ensure_dir, resolve_doc, resolve_project
 from shared.frontmatter import parse, write

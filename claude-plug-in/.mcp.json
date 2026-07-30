@@ -2,8 +2,7 @@
   "mcpServers": {
     "inkclerk": {
       "command": "uv",
-      "args": ["run", "python", "main.py"],
-      "cwd": "${CLAUDE_PLUGIN_ROOT}/mcp",
+      "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}/mcp", "python", "main.py"],
       "env": {
         "INKCLERK_WEB_APP_URL": "https://inkclerk-web.onrender.com",
         "INKCLERK_WEB_API_URL": "https://inkclerk-web-api.onrender.com"

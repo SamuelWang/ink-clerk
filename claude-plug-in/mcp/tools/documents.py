@@ -5,7 +5,7 @@ from pathlib import Path
 from mcp.types import ToolAnnotations
 from uuid_extensions import uuid7
 
-from main import mcp
+from shared.mcp_instance import mcp
 from shared.errors import DocumentNotFoundError, FileAlreadyExistsError
 from shared.fs import draft_path_for, ensure_dir, resolve_doc, resolve_project
 from shared.frontmatter import parse, write

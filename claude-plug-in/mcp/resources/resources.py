@@ -5,7 +5,7 @@ import shared.fs as fs
 import tools.documents
 import tools.drafts
 import tools.projects
-from main import mcp
+from shared.mcp_instance import mcp
 from shared.errors import InkClerkError
 
 

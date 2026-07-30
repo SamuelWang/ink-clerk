@@ -6,7 +6,7 @@ from mcp.types import ToolAnnotations
 from uuid_extensions import uuid7
 
 import shared.fs as fs
-from main import mcp
+from shared.mcp_instance import mcp
 from shared.errors import FolderAlreadyExistsError
 from shared.fs import ensure_dir, resolve_project, slugify
 

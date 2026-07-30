@@ -3,7 +3,7 @@ from mcp.server.fastmcp.prompts.base import Message, UserMessage
 import shared.fs as fs
 import tools.documents
 import tools.drafts
-from main import mcp
+from shared.mcp_instance import mcp
 
 # The installed SDK (mcp==1.28.0) only supports role: Literal["user", "assistant"]
 # on prompt messages — there is no "system" role. The contract-establishing

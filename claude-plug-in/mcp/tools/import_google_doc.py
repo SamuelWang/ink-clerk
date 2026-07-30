@@ -16,7 +16,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from uuid_extensions import uuid7
 
-from main import mcp
+from shared.mcp_instance import mcp
 from shared.errors import (
     AuthRequiredError,
     FileAlreadyExistsError,

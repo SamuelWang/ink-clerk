@@ -1,6 +1,4 @@
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("inkclerk")
+from shared.mcp_instance import mcp
 
 import tools.projects  # noqa: F401
 import tools.documents  # noqa: F401
