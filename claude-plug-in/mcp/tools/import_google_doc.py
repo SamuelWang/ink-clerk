@@ -1,3 +1,5 @@
+import base64
+import mimetypes
 import os
 import re
 import time
@@ -174,16 +176,31 @@ def _image_filename_from_url(url: str) -> str:
     return truncate_basename(raw)
 
 
+def _decode_data_url(url: str) -> tuple[bytes, str]:
+    header, _, encoded = url.partition(",")
+    mime = header[len("data:"):].split(";")[0] or "application/octet-stream"
+    if ";base64" in header:
+        data = base64.b64decode(encoded)
+    else:
+        data = unquote(encoded).encode("utf-8")
+    return data, mime
+
+
 def download_images(
     image_urls: list[str], creds: Credentials, assets_dir: Path
 ) -> dict[str, str]:
     ensure_dir(assets_dir)
     session = AuthorizedSession(creds)
     url_to_relpath: dict[str, str] = {}
-    for url in image_urls:
-        filename = _image_filename_from_url(url)
-        response = session.get(url)
-        (assets_dir / filename).write_bytes(response.content)
+    for i, url in enumerate(image_urls):
+        if url.startswith("data:"):
+            content, mime = _decode_data_url(url)
+            ext = mimetypes.guess_extension(mime) or ".bin"
+            filename = truncate_basename(f"image-{i}{ext}")
+        else:
+            filename = _image_filename_from_url(url)
+            content = session.get(url).content
+        (assets_dir / filename).write_bytes(content)
         url_to_relpath[url] = f"./{assets_dir.name}/{quote(filename, safe='')}"
     return url_to_relpath
 
