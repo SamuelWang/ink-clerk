@@ -55,7 +55,7 @@ claude-plug-in/
 | `get_diff(project_name, doc_path)` | `drafts.py` | read-only, unified diff vs. the formal version |
 | `accept_draft(project_name, doc_path)` | `drafts.py` | destructive — draft becomes the formal version |
 | `reject_draft(project_name, doc_path)` | `drafts.py` | destructive — discards the draft |
-| `import_google_doc(project_name, filename="", subdirectory="")` | `import_google_doc.py` | opens a browser for Google sign-in + Picker (see Configuration) |
+| `import_google_doc(project_name, filename="", subdirectory="", session_id="")` | `import_google_doc.py` | two-step: first call (no `session_id`) opens a browser for Google sign-in + Picker and returns immediately; second call (with `session_id`) completes the import (see Configuration) |
 
 ### Resources (`mcp/resources/resources.py`)
 
