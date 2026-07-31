@@ -39,6 +39,7 @@ declare global {
           initTokenClient(config: {
             client_id: string
             scope: string
+            prompt?: string
             callback: (response: GoogleTokenResponse) => void
           }): GoogleTokenClient
         }
