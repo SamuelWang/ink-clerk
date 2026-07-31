@@ -27,6 +27,7 @@ interface GooglePickerBuilder {
   addView(view: GoogleDocsView): GooglePickerBuilder
   setOAuthToken(token: string): GooglePickerBuilder
   setDeveloperKey(key: string): GooglePickerBuilder
+  setAppId(appId: string): GooglePickerBuilder
   setCallback(callback: (data: GooglePickerResponse) => void): GooglePickerBuilder
   build(): GooglePicker
 }

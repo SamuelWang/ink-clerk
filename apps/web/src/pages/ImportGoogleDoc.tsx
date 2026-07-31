@@ -54,6 +54,7 @@ export default function ImportGoogleDoc() {
       .addView(view)
       .setOAuthToken(accessToken)
       .setDeveloperKey(import.meta.env.VITE_GOOGLE_PICKER_API_KEY)
+      .setAppId(import.meta.env.VITE_GOOGLE_APP_ID)
       .setCallback((data) => {
         if (data.action !== window.google.picker.Action.PICKED) {
           return
