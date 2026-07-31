@@ -96,7 +96,7 @@ Claude Code slash commands, invoked as `/inkclerk:<name>`:
   Google itself, never holds a Google client secret)
 
 `.mcp.json` already ships these pointed at the deployed Render production services
-(`https://inkclerk-web.onrender.com`, `https://inkclerk-web-api.onrender.com`), so no local
+(`https://inkclerk-web.yingchieh.com`, `https://inkclerk-web-api.yingchieh.com`), so no local
 `apps/web`/`apps/web-api` setup is needed to use this plugin, including for testing (see below).
 
 ## Install
@@ -184,8 +184,8 @@ Desktop's own config instead:
       "command": "uv",
       "args": ["run", "--directory", "/absolute/path/to/ink-clerk/claude-plug-in/mcp", "python", "main.py"],
       "env": {
-        "INKCLERK_WEB_APP_URL": "https://inkclerk-web.onrender.com",
-        "INKCLERK_WEB_API_URL": "https://inkclerk-web-api.onrender.com"
+        "INKCLERK_WEB_APP_URL": "https://inkclerk-web.yingchieh.com",
+        "INKCLERK_WEB_API_URL": "https://inkclerk-web-api.yingchieh.com"
       }
     }
   }
