@@ -16,7 +16,7 @@ interface GoogleDocsView {
 
 interface GooglePickerResponse {
   action: string
-  docs: Array<{ id: string; name: string }>
+  docs: Array<{ id: string; name: string; resourceKey?: string }>
 }
 
 interface GooglePicker {

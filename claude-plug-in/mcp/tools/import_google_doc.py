@@ -74,6 +74,7 @@ def _check_session_ready(web_api_url: str, session_id: str, sign_in_url: str) ->
                 "access_token": payload["access_token"],
                 "file_id": payload["file_id"],
                 "file_name": payload["file_name"],
+                "resource_key": payload.get("resource_key", ""),
             }
         if status == "expired":
             raise AuthRequiredError(
@@ -93,14 +94,25 @@ def _await_credentials(session_id: str) -> tuple[Credentials, dict]:
     web_app_url = _web_app_url()
     sign_in_url = f"{web_app_url}/import/google-doc?session_id={session_id}"
     token_data = _check_session_ready(_web_api_url(), session_id, sign_in_url)
-    picked = {"file_id": token_data["file_id"], "file_name": token_data["file_name"]}
+    picked = {
+        "file_id": token_data["file_id"],
+        "file_name": token_data["file_name"],
+        "resource_key": token_data["resource_key"],
+    }
     return Credentials(token=token_data["access_token"]), picked
 
 
-def export_doc_html(doc_id: str, creds: Credentials) -> str:
+def _add_resource_key_header(request, doc_id: str, resource_key: str) -> None:
+    if resource_key:
+        request.headers["X-Goog-Drive-Resource-Keys"] = f"{doc_id}/{resource_key}"
+
+
+def export_doc_html(doc_id: str, creds: Credentials, resource_key: str = "") -> str:
     service = build("drive", "v3", credentials=creds)
+    request = service.files().export(fileId=doc_id, mimeType="text/html")
+    _add_resource_key_header(request, doc_id, resource_key)
     try:
-        html_bytes = service.files().export(fileId=doc_id, mimeType="text/html").execute()
+        html_bytes = request.execute()
     except HttpError as e:
         if e.resp.status == 403:
             raise PermissionDeniedError(
@@ -142,10 +154,12 @@ def _slugify_ascii(name: str) -> str:
     return s.strip("-") or "untitled"
 
 
-def get_doc_title(doc_id: str, creds: Credentials) -> str:
+def get_doc_title(doc_id: str, creds: Credentials, resource_key: str = "") -> str:
     service = build("drive", "v3", credentials=creds)
+    request = service.files().get(fileId=doc_id, fields="name")
+    _add_resource_key_header(request, doc_id, resource_key)
     try:
-        meta = service.files().get(fileId=doc_id, fields="name").execute()
+        meta = request.execute()
     except HttpError as e:
         if e.resp.status == 403:
             raise PermissionDeniedError(
@@ -202,18 +216,19 @@ def import_google_doc(
 
     creds, picked = _await_credentials(session_id)
     doc_id = picked["file_id"]
+    resource_key = picked["resource_key"]
     project_path, _ = resolve_project(project_name)
 
     if filename:
         output_filename = filename
     else:
-        output_filename = _slugify_ascii(get_doc_title(doc_id, creds))
+        output_filename = _slugify_ascii(get_doc_title(doc_id, creds, resource_key))
 
     doc_path = project_path / subdirectory / f"{output_filename}.md"
     if doc_path.exists():
         raise FileAlreadyExistsError(f"Document '{output_filename}.md' already exists")
 
-    html = export_doc_html(doc_id, creds)
+    html = export_doc_html(doc_id, creds, resource_key)
 
     image_urls = extract_image_urls(html)
     markdown = convert_to_markdown(html)

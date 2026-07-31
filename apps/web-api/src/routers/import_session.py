@@ -16,6 +16,7 @@ class CompleteRequest(BaseModel):
     expires_in: int
     file_id: str
     file_name: str
+    resource_key: str = ""
 
 
 @router.post("/session/{session_id}/complete")
@@ -26,6 +27,7 @@ def complete_session(session_id: str, body: CompleteRequest) -> JSONResponse:
         "expires_in": body.expires_in,
         "file_id": body.file_id,
         "file_name": body.file_name,
+        "resource_key": body.resource_key,
         "created_at": time.time(),
     }
     return JSONResponse(content={"status": "ready"})
@@ -54,4 +56,5 @@ def get_session(session_id: str) -> dict:
         "expires_in": entry["expires_in"],
         "file_id": entry["file_id"],
         "file_name": entry["file_name"],
+        "resource_key": entry.get("resource_key", ""),
     }

@@ -48,6 +48,7 @@ class TestGetSession:
             "expires_in": 3600,
             "file_id": "doc-1",
             "file_name": "My Doc",
+            "resource_key": "",
         }
 
     def test_second_call_after_claim_returns_expired(self):
@@ -89,3 +90,12 @@ class TestCompleteSession:
         assert entry["access_token"] == "tok-abc"
         assert entry["file_id"] == "doc-1"
         assert entry["file_name"] == "My Doc"
+        assert entry["resource_key"] == ""
+
+    def test_resource_key_stored_and_returned(self):
+        session_id = "session-123"
+
+        _complete(session_id, resource_key="rk-1")
+        response = client.get(f"/import/google-doc/session/{session_id}")
+
+        assert response.json()["resource_key"] == "rk-1"

@@ -59,13 +59,19 @@ export default function ImportGoogleDoc() {
           return
         }
         const doc = data.docs[0]
-        void completeSession(accessToken, expiresIn, doc.id, doc.name)
+        void completeSession(accessToken, expiresIn, doc.id, doc.name, doc.resourceKey ?? '')
       })
       .build()
     picker.setVisible(true)
   }
 
-  async function completeSession(accessToken: string, expiresIn: number, fileId: string, fileName: string) {
+  async function completeSession(
+    accessToken: string,
+    expiresIn: number,
+    fileId: string,
+    fileName: string,
+    resourceKey: string,
+  ) {
     setStatus('completing')
     try {
       const response = await fetch(
@@ -78,6 +84,7 @@ export default function ImportGoogleDoc() {
             expires_in: expiresIn,
             file_id: fileId,
             file_name: fileName,
+            resource_key: resourceKey,
           }),
         },
       )

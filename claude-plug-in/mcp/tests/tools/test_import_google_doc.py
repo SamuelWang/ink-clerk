@@ -127,6 +127,7 @@ class TestAwaitCredentials:
                     "expires_in": 3600,
                     "file_id": "doc-abc",
                     "file_name": "My Picked Doc",
+                    "resource_key": "rk-1",
                 }
             ),
         )
@@ -134,7 +135,11 @@ class TestAwaitCredentials:
         creds, picked = import_google_doc._await_credentials("session-1")
 
         assert creds.token == "at-1"
-        assert picked == {"file_id": "doc-abc", "file_name": "My Picked Doc"}
+        assert picked == {
+            "file_id": "doc-abc",
+            "file_name": "My Picked Doc",
+            "resource_key": "rk-1",
+        }
 
     def test_expired_status_raises_auth_required(self, monkeypatch):
         monkeypatch.setattr(
@@ -171,6 +176,7 @@ class TestAwaitCredentials:
                     "expires_in": 3600,
                     "file_id": "doc-abc",
                     "file_name": "My Picked Doc",
+                    "resource_key": "rk-1",
                 }
             )
 
@@ -179,7 +185,11 @@ class TestAwaitCredentials:
         creds, picked = import_google_doc._await_credentials("session-1")
 
         assert creds.token == "at-1"
-        assert picked == {"file_id": "doc-abc", "file_name": "My Picked Doc"}
+        assert picked == {
+            "file_id": "doc-abc",
+            "file_name": "My Picked Doc",
+            "resource_key": "rk-1",
+        }
         assert call_count["n"] == 2
 
     def test_persistent_request_error_exhausts_attempts_and_raises_auth_required(
@@ -209,6 +219,7 @@ class _FakeFilesExport:
     def __init__(self, result: bytes | None, error: HttpError | None):
         self._result = result
         self._error = error
+        self.headers: dict[str, str] = {}
 
     def execute(self) -> bytes:
         if self._error is not None:
@@ -220,6 +231,7 @@ class _FakeFilesGet:
     def __init__(self, title: str | None, error: HttpError | None):
         self._title = title
         self._error = error
+        self.headers: dict[str, str] = {}
 
     def execute(self) -> dict:
         if self._error is not None:
@@ -302,6 +314,44 @@ class TestExportDocHtml:
 
         assert "500" in str(exc_info.value)
         assert "Internal Server Error" in str(exc_info.value)
+
+    def test_resource_key_header_reaches_request(self, monkeypatch):
+        captured = {}
+
+        class _CapturingFiles:
+            def export(self, fileId, mimeType):
+                req = _FakeFilesExport(b"<html></html>", None)
+                captured["request"] = req
+                return req
+
+        class _CapturingService:
+            def files(self):
+                return _CapturingFiles()
+
+        monkeypatch.setattr(import_google_doc, "build", lambda *a, **k: _CapturingService())
+
+        export_doc_html("doc-123", object(), resource_key="rk-1")
+
+        assert captured["request"].headers == {"X-Goog-Drive-Resource-Keys": "doc-123/rk-1"}
+
+    def test_no_resource_key_does_not_set_header(self, monkeypatch):
+        captured = {}
+
+        class _CapturingFiles:
+            def export(self, fileId, mimeType):
+                req = _FakeFilesExport(b"<html></html>", None)
+                captured["request"] = req
+                return req
+
+        class _CapturingService:
+            def files(self):
+                return _CapturingFiles()
+
+        monkeypatch.setattr(import_google_doc, "build", lambda *a, **k: _CapturingService())
+
+        export_doc_html("doc-123", object())
+
+        assert captured["request"].headers == {}
 
 
 class TestExtractImageUrls:
@@ -573,7 +623,7 @@ class TestImportGoogleDoc:
         monkeypatch.setattr(
             import_google_doc,
             "_await_credentials",
-            lambda *a, **k: (object(), {"file_id": "doc-123", "file_name": "Doc"}),
+            lambda *a, **k: (object(), {"file_id": "doc-123", "file_name": "Doc", "resource_key": ""}),
         )
         monkeypatch.setattr(
             import_google_doc,
@@ -679,16 +729,16 @@ class TestImportGoogleDoc:
         monkeypatch.setattr(
             import_google_doc,
             "_await_credentials",
-            lambda *a, **k: (object(), {"file_id": "picked-doc", "file_name": "Picked"}),
+            lambda *a, **k: (object(), {"file_id": "picked-doc", "file_name": "Picked", "resource_key": ""}),
         )
 
         captured_doc_ids = []
 
-        def _fake_get_doc_title(doc_id, creds):
+        def _fake_get_doc_title(doc_id, creds, resource_key=""):
             captured_doc_ids.append(("title", doc_id))
             return "Doc"
 
-        def _fake_export(doc_id, creds):
+        def _fake_export(doc_id, creds, resource_key=""):
             captured_doc_ids.append(("export", doc_id))
             return "<h1>Hi</h1>"
 
@@ -707,14 +757,16 @@ class TestImportGoogleDocPermissionDenied:
         monkeypatch.setattr(
             import_google_doc,
             "_await_credentials",
-            lambda *a, **k: (object(), {"file_id": "doc-123", "file_name": "Doc"}),
+            lambda *a, **k: (object(), {"file_id": "doc-123", "file_name": "Doc", "resource_key": ""}),
         )
 
     def test_403_on_title_lookup_propagates(self, tmp_path, monkeypatch):
         self._setup(tmp_path, monkeypatch)
-        monkeypatch.setattr(import_google_doc, "export_doc_html", lambda doc_id, creds: "<h1>Hi</h1>")
+        monkeypatch.setattr(
+            import_google_doc, "export_doc_html", lambda doc_id, creds, resource_key="": "<h1>Hi</h1>"
+        )
 
-        def _always_fail(doc_id, creds):
+        def _always_fail(doc_id, creds, resource_key=""):
             raise PermissionDeniedError("no access")
 
         monkeypatch.setattr(import_google_doc, "get_doc_title", _always_fail)
@@ -724,9 +776,11 @@ class TestImportGoogleDocPermissionDenied:
 
     def test_403_on_export_propagates(self, tmp_path, monkeypatch):
         self._setup(tmp_path, monkeypatch)
-        monkeypatch.setattr(import_google_doc, "get_doc_title", lambda doc_id, creds: "Doc")
+        monkeypatch.setattr(
+            import_google_doc, "get_doc_title", lambda doc_id, creds, resource_key="": "Doc"
+        )
 
-        def _always_fail(doc_id, creds):
+        def _always_fail(doc_id, creds, resource_key=""):
             raise PermissionDeniedError("no access")
 
         monkeypatch.setattr(import_google_doc, "export_doc_html", _always_fail)
