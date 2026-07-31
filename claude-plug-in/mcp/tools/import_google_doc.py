@@ -26,8 +26,9 @@ from shared.errors import (
 from shared.fs import ensure_dir, resolve_project, truncate_basename
 from shared.frontmatter import write
 
-POLL_INTERVAL_SECONDS = 2
-POLL_TIMEOUT_SECONDS = 240
+CHECK_INTERVAL_SECONDS = 2
+CHECK_ATTEMPTS = 5  # ~10s total — smooths a race between "user says done" and the
+                    # relay recording it; not a substitute for waiting on the user
 
 
 def _web_app_url() -> str:
@@ -49,18 +50,22 @@ def _web_api_url() -> str:
     return url
 
 
-def _poll_for_token(web_app_url: str, web_api_url: str, session_id: str) -> dict:
-    webbrowser.open(f"{web_app_url}/import/google-doc?session_id={session_id}")
+def _start_import_session() -> dict:
+    web_app_url = _web_app_url()
+    _web_api_url()  # validate both env vars up front, before opening a browser
+    session_id = str(uuid4())
+    sign_in_url = f"{web_app_url}/import/google-doc?session_id={session_id}"
+    webbrowser.open(sign_in_url)  # best-effort convenience; never relied upon
+    return {"status": "pending", "session_id": session_id, "sign_in_url": sign_in_url}
 
-    max_attempts = POLL_TIMEOUT_SECONDS // POLL_INTERVAL_SECONDS
-    for _ in range(max_attempts):
+
+def _check_session_ready(web_api_url: str, session_id: str, sign_in_url: str) -> dict:
+    for _ in range(CHECK_ATTEMPTS):
         try:
             response = httpx.get(f"{web_api_url}/import/google-doc/session/{session_id}")
-        except httpx.RequestError as e:
-            raise AuthRequiredError(
-                "Could not reach the InkClerk web API while polling for the "
-                "Google sign-in result"
-            ) from e
+        except httpx.RequestError:
+            time.sleep(CHECK_INTERVAL_SECONDS)
+            continue
 
         payload = response.json()
         status = payload.get("status")
@@ -72,22 +77,22 @@ def _poll_for_token(web_app_url: str, web_api_url: str, session_id: str) -> dict
             }
         if status == "expired":
             raise AuthRequiredError(
-                "The Google sign-in session expired before it was completed; "
-                "please try again"
+                "The Google sign-in session expired. Start a new import "
+                "(call without session_id) to get a fresh link."
             )
-        time.sleep(POLL_INTERVAL_SECONDS)
+        time.sleep(CHECK_INTERVAL_SECONDS)
 
     raise AuthRequiredError(
-        "Timed out waiting for Google sign-in to complete in the browser"
+        "Sign-in doesn't look complete yet. Make sure you opened "
+        f"{sign_in_url}, finished signing in with Google, and picked the "
+        "document — then ask to check again."
     )
 
 
-def get_credentials() -> tuple[Credentials, dict]:
-    """Runs a fresh browser sign-in + Picker round and returns credentials
-    plus the `{"file_id", "file_name"}` the user picked (drive.file only
-    grants access to files selected that way, so every import needs its own
-    Picker round — there is no token to reuse across calls)."""
-    token_data = _poll_for_token(_web_app_url(), _web_api_url(), session_id=str(uuid4()))
+def _await_credentials(session_id: str) -> tuple[Credentials, dict]:
+    web_app_url = _web_app_url()
+    sign_in_url = f"{web_app_url}/import/google-doc?session_id={session_id}"
+    token_data = _check_session_ready(_web_api_url(), session_id, sign_in_url)
     picked = {"file_id": token_data["file_id"], "file_name": token_data["file_name"]}
     return Credentials(token=token_data["access_token"]), picked
 
@@ -98,7 +103,9 @@ def export_doc_html(doc_id: str, creds: Credentials) -> str:
         html_bytes = service.files().export(fileId=doc_id, mimeType="text/html").execute()
     except HttpError as e:
         if e.resp.status == 403:
-            raise PermissionDeniedError(f"No permission to access Google Doc {doc_id}") from e
+            raise PermissionDeniedError(
+                f"No permission to access Google Doc {doc_id}: {e.reason}"
+            ) from e
         raise GoogleApiError(f"Drive API error {e.resp.status}: {e.reason}") from e
     return html_bytes.decode("utf-8")
 
@@ -141,7 +148,9 @@ def get_doc_title(doc_id: str, creds: Credentials) -> str:
         meta = service.files().get(fileId=doc_id, fields="name").execute()
     except HttpError as e:
         if e.resp.status == 403:
-            raise PermissionDeniedError(f"No permission to access Google Doc {doc_id}") from e
+            raise PermissionDeniedError(
+                f"No permission to access Google Doc {doc_id}: {e.reason}"
+            ) from e
         raise GoogleApiError(f"Drive API error {e.resp.status}: {e.reason}") from e
     return meta["name"]
 
@@ -176,8 +185,22 @@ def import_google_doc(
     project_name: str,
     filename: str = "",
     subdirectory: str = "",
+    session_id: str = "",
 ) -> dict:
-    creds, picked = get_credentials()
+    """Import a Google Doc into an InkClerk project as Markdown.
+
+    Call this twice. First, call it with session_id omitted — it opens a
+    browser for Google sign-in + Picker (best-effort) and returns
+    immediately with {"status": "pending", "session_id", "sign_in_url"}.
+    Relay sign_in_url to the user and wait for them to confirm they're
+    done. Then call this again with that same session_id to complete the
+    import — this does one quick check, not a long wait, so only call it
+    after the user has actually confirmed.
+    """
+    if not session_id:
+        return _start_import_session()
+
+    creds, picked = _await_credentials(session_id)
     doc_id = picked["file_id"]
     project_path, _ = resolve_project(project_name)
 

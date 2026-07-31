@@ -20,7 +20,6 @@ from tools.import_google_doc import (
     download_images,
     export_doc_html,
     extract_image_urls,
-    get_credentials,
     get_doc_title,
     replace_image_references,
 )
@@ -57,37 +56,85 @@ def _isolated_env(monkeypatch):
     monkeypatch.setattr(import_google_doc.webbrowser, "open", lambda _url: True)
 
 
-class TestGetCredentials:
-    def test_polls_until_ready_and_returns_picked_file(self, monkeypatch):
+class TestStartImportSession:
+    def test_returns_pending_status_session_id_and_sign_in_url(self, monkeypatch):
         opened_urls = []
         monkeypatch.setattr(
             import_google_doc.webbrowser, "open", lambda url: opened_urls.append(url)
         )
 
-        responses = iter(
-            [
-                _FakeResponse({"status": "pending"}),
-                _FakeResponse({"status": "pending"}),
-                _FakeResponse(
-                    {
-                        "status": "ready",
-                        "access_token": "at-1",
-                        "expires_in": 3600,
-                        "file_id": "doc-abc",
-                        "file_name": "My Picked Doc",
-                    }
-                ),
-            ]
-        )
-        monkeypatch.setattr(import_google_doc.httpx, "get", lambda _url: next(responses))
+        result = import_google_doc_tool(project_name="Alpha")
 
-        creds, picked = get_credentials()
+        assert result["status"] == "pending"
+        assert result["session_id"]
+        assert result["sign_in_url"] == (
+            f"https://web.example.com/import/google-doc?session_id={result['session_id']}"
+        )
+        assert opened_urls == [result["sign_in_url"]]
+
+    def test_does_not_poll_the_api(self, monkeypatch):
+        def _fail(*_args, **_kwargs):
+            raise AssertionError("should not poll the API before the user confirms")
+
+        monkeypatch.setattr(import_google_doc.httpx, "get", _fail)
+
+        import_google_doc_tool(project_name="Alpha")
+
+    def test_does_not_resolve_project(self, monkeypatch):
+        def _fail(*_args, **_kwargs):
+            raise AssertionError("should not resolve the project before the user confirms")
+
+        monkeypatch.setattr(import_google_doc, "resolve_project", _fail)
+
+        import_google_doc_tool(project_name="Alpha")
+
+    def test_missing_web_app_url_raises_auth_required_without_opening_browser(
+        self, monkeypatch
+    ):
+        monkeypatch.delenv("INKCLERK_WEB_APP_URL", raising=False)
+
+        def _fail(*_args, **_kwargs):
+            raise AssertionError("should not open a browser")
+
+        monkeypatch.setattr(import_google_doc.webbrowser, "open", _fail)
+
+        with pytest.raises(AuthRequiredError):
+            import_google_doc_tool(project_name="Alpha")
+
+    def test_missing_web_api_url_raises_auth_required_without_opening_browser(
+        self, monkeypatch
+    ):
+        monkeypatch.delenv("INKCLERK_WEB_API_URL", raising=False)
+
+        def _fail(*_args, **_kwargs):
+            raise AssertionError("should not open a browser")
+
+        monkeypatch.setattr(import_google_doc.webbrowser, "open", _fail)
+
+        with pytest.raises(AuthRequiredError):
+            import_google_doc_tool(project_name="Alpha")
+
+
+class TestAwaitCredentials:
+    def test_ready_on_first_check_returns_picked_file(self, monkeypatch):
+        monkeypatch.setattr(
+            import_google_doc.httpx,
+            "get",
+            lambda _url: _FakeResponse(
+                {
+                    "status": "ready",
+                    "access_token": "at-1",
+                    "expires_in": 3600,
+                    "file_id": "doc-abc",
+                    "file_name": "My Picked Doc",
+                }
+            ),
+        )
+
+        creds, picked = import_google_doc._await_credentials("session-1")
 
         assert creds.token == "at-1"
         assert picked == {"file_id": "doc-abc", "file_name": "My Picked Doc"}
-        assert opened_urls[0].startswith(
-            "https://web.example.com/import/google-doc?session_id="
-        )
 
     def test_expired_status_raises_auth_required(self, monkeypatch):
         monkeypatch.setattr(
@@ -95,48 +142,61 @@ class TestGetCredentials:
         )
 
         with pytest.raises(AuthRequiredError):
-            get_credentials()
+            import_google_doc._await_credentials("session-1")
 
-    def test_timeout_without_ready_raises_auth_required(self, monkeypatch):
+    def test_not_ready_after_all_attempts_raises_with_sign_in_url(self, monkeypatch):
         monkeypatch.setattr(
             import_google_doc.httpx, "get", lambda _url: _FakeResponse({"status": "pending"})
         )
 
-        with pytest.raises(AuthRequiredError):
-            get_credentials()
+        with pytest.raises(AuthRequiredError) as exc_info:
+            import_google_doc._await_credentials("session-1")
 
-    def test_request_error_during_poll_raises_auth_required(self, monkeypatch):
-        def _raise(_url):
+        assert (
+            "https://web.example.com/import/google-doc?session_id=session-1"
+            in str(exc_info.value)
+        )
+
+    def test_transient_request_error_is_retried_until_ready(self, monkeypatch):
+        call_count = {"n": 0}
+
+        def _flaky_get(_url):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise httpx.RequestError("connection failed")
+            return _FakeResponse(
+                {
+                    "status": "ready",
+                    "access_token": "at-1",
+                    "expires_in": 3600,
+                    "file_id": "doc-abc",
+                    "file_name": "My Picked Doc",
+                }
+            )
+
+        monkeypatch.setattr(import_google_doc.httpx, "get", _flaky_get)
+
+        creds, picked = import_google_doc._await_credentials("session-1")
+
+        assert creds.token == "at-1"
+        assert picked == {"file_id": "doc-abc", "file_name": "My Picked Doc"}
+        assert call_count["n"] == 2
+
+    def test_persistent_request_error_exhausts_attempts_and_raises_auth_required(
+        self, monkeypatch
+    ):
+        call_count = {"n": 0}
+
+        def _always_raise(_url):
+            call_count["n"] += 1
             raise httpx.RequestError("connection failed")
 
-        monkeypatch.setattr(import_google_doc.httpx, "get", _raise)
+        monkeypatch.setattr(import_google_doc.httpx, "get", _always_raise)
 
         with pytest.raises(AuthRequiredError):
-            get_credentials()
+            import_google_doc._await_credentials("session-1")
 
-    def test_missing_web_app_url_raises_auth_required_without_network_call(self, monkeypatch):
-        monkeypatch.delenv("INKCLERK_WEB_APP_URL", raising=False)
-
-        def _fail(*_args, **_kwargs):
-            raise AssertionError("should not make a network call")
-
-        monkeypatch.setattr(import_google_doc.httpx, "get", _fail)
-        monkeypatch.setattr(import_google_doc.webbrowser, "open", _fail)
-
-        with pytest.raises(AuthRequiredError):
-            get_credentials()
-
-    def test_missing_web_api_url_raises_auth_required_without_network_call(self, monkeypatch):
-        monkeypatch.delenv("INKCLERK_WEB_API_URL", raising=False)
-
-        def _fail(*_args, **_kwargs):
-            raise AssertionError("should not make a network call")
-
-        monkeypatch.setattr(import_google_doc.httpx, "get", _fail)
-        monkeypatch.setattr(import_google_doc.webbrowser, "open", _fail)
-
-        with pytest.raises(AuthRequiredError):
-            get_credentials()
+        assert call_count["n"] == import_google_doc.CHECK_ATTEMPTS
 
 
 class _FakeHttpResp:
@@ -226,8 +286,10 @@ class TestExportDocHtml:
             import_google_doc, "build", lambda *a, **k: _FakeDriveService(error=error)
         )
 
-        with pytest.raises(PermissionDeniedError):
+        with pytest.raises(PermissionDeniedError) as exc_info:
             export_doc_html("doc-123", object())
+
+        assert "Forbidden" in str(exc_info.value)
 
     def test_other_http_error_raises_google_api_error_with_status_and_reason(self, monkeypatch):
         error = HttpError(resp=_FakeHttpResp(500, "Internal Server Error"), content=b"{}")
@@ -367,8 +429,10 @@ class TestGetDocTitle:
             import_google_doc, "build", lambda *a, **k: _FakeDriveService(title_error=error)
         )
 
-        with pytest.raises(PermissionDeniedError):
+        with pytest.raises(PermissionDeniedError) as exc_info:
             get_doc_title("doc-123", object())
+
+        assert "Forbidden" in str(exc_info.value)
 
     def test_other_http_error_raises_google_api_error(self, monkeypatch):
         error = HttpError(resp=_FakeHttpResp(500, "Internal Server Error"), content=b"{}")
@@ -508,7 +572,7 @@ class TestImportGoogleDoc:
         monkeypatch.setattr(fs, "PROJECTS_ROOT", tmp_path)
         monkeypatch.setattr(
             import_google_doc,
-            "get_credentials",
+            "_await_credentials",
             lambda *a, **k: (object(), {"file_id": "doc-123", "file_name": "Doc"}),
         )
         monkeypatch.setattr(
@@ -521,7 +585,7 @@ class TestImportGoogleDoc:
     def test_default_filename_is_slugified_doc_title(self, tmp_path, monkeypatch):
         self._setup(tmp_path, monkeypatch, "<h1>Hello</h1>", title="My Great Doc")
 
-        result = import_google_doc_tool(project_name="Alpha")
+        result = import_google_doc_tool(project_name="Alpha", session_id="test-session")
 
         expected_path = tmp_path / "alpha" / "my-great-doc.md"
         assert result["doc_path"] == str(expected_path)
@@ -532,14 +596,16 @@ class TestImportGoogleDoc:
         # None would raise AttributeError and fail this test.
         self._setup(tmp_path, monkeypatch, "<h1>Hi</h1>")
 
-        result = import_google_doc_tool(project_name="Alpha", filename="custom-name")
+        result = import_google_doc_tool(
+            project_name="Alpha", filename="custom-name", session_id="test-session"
+        )
 
         assert result["doc_path"] == str(tmp_path / "alpha" / "custom-name.md")
 
     def test_frontmatter_prepended_with_id_created_last_modified(self, tmp_path, monkeypatch):
         self._setup(tmp_path, monkeypatch, "<h1>Hello</h1><p>World</p>", title="Doc")
 
-        result = import_google_doc_tool(project_name="Alpha")
+        result = import_google_doc_tool(project_name="Alpha", session_id="test-session")
 
         text = Path(result["doc_path"]).read_text(encoding="utf-8")
         assert text.startswith("---\n")
@@ -559,12 +625,14 @@ class TestImportGoogleDoc:
         monkeypatch.setattr(import_google_doc, "export_doc_html", _fail_export)
 
         with pytest.raises(FileAlreadyExistsError):
-            import_google_doc_tool(project_name="Alpha", filename="existing")
+            import_google_doc_tool(
+                project_name="Alpha", filename="existing", session_id="test-session"
+            )
 
     def test_returns_doc_path_doc_id_and_empty_dropped_styles(self, tmp_path, monkeypatch):
         self._setup(tmp_path, monkeypatch, "<h1>Hi</h1>", title="Doc")
 
-        result = import_google_doc_tool(project_name="Alpha")
+        result = import_google_doc_tool(project_name="Alpha", session_id="test-session")
 
         assert set(result.keys()) == {"doc_path", "doc_id", "dropped_styles"}
         assert result["dropped_styles"] == []
@@ -573,7 +641,7 @@ class TestImportGoogleDoc:
     def test_no_images_skips_assets_dir_creation(self, tmp_path, monkeypatch):
         self._setup(tmp_path, monkeypatch, "<h1>No images</h1>", title="Doc")
 
-        result = import_google_doc_tool(project_name="Alpha")
+        result = import_google_doc_tool(project_name="Alpha", session_id="test-session")
 
         assets_dir = Path(result["doc_path"]).with_name("doc-assets")
         assert not assets_dir.exists()
@@ -588,7 +656,7 @@ class TestImportGoogleDoc:
             _make_fake_authorized_session({image_url: b"PNGDATA"}),
         )
 
-        result = import_google_doc_tool(project_name="Alpha")
+        result = import_google_doc_tool(project_name="Alpha", session_id="test-session")
 
         assets_dir = Path(result["doc_path"]).with_name("doc-assets")
         assert (assets_dir / "photo.png").read_bytes() == b"PNGDATA"
@@ -599,7 +667,9 @@ class TestImportGoogleDoc:
     def test_subdirectory_argument_places_file_correctly(self, tmp_path, monkeypatch):
         self._setup(tmp_path, monkeypatch, "<h1>Hi</h1>", title="Doc")
 
-        result = import_google_doc_tool(project_name="Alpha", subdirectory="imports")
+        result = import_google_doc_tool(
+            project_name="Alpha", subdirectory="imports", session_id="test-session"
+        )
 
         assert result["doc_path"] == str(tmp_path / "alpha" / "imports" / "doc.md")
 
@@ -608,7 +678,7 @@ class TestImportGoogleDoc:
         make_project(tmp_path, "Alpha")
         monkeypatch.setattr(
             import_google_doc,
-            "get_credentials",
+            "_await_credentials",
             lambda *a, **k: (object(), {"file_id": "picked-doc", "file_name": "Picked"}),
         )
 
@@ -625,7 +695,7 @@ class TestImportGoogleDoc:
         monkeypatch.setattr(import_google_doc, "get_doc_title", _fake_get_doc_title)
         monkeypatch.setattr(import_google_doc, "export_doc_html", _fake_export)
 
-        import_google_doc_tool(project_name="Alpha")
+        import_google_doc_tool(project_name="Alpha", session_id="test-session")
 
         assert captured_doc_ids == [("title", "picked-doc"), ("export", "picked-doc")]
 
@@ -636,7 +706,7 @@ class TestImportGoogleDocPermissionDenied:
         make_project(tmp_path, "Alpha")
         monkeypatch.setattr(
             import_google_doc,
-            "get_credentials",
+            "_await_credentials",
             lambda *a, **k: (object(), {"file_id": "doc-123", "file_name": "Doc"}),
         )
 
@@ -650,7 +720,7 @@ class TestImportGoogleDocPermissionDenied:
         monkeypatch.setattr(import_google_doc, "get_doc_title", _always_fail)
 
         with pytest.raises(PermissionDeniedError):
-            import_google_doc_tool(project_name="Alpha")
+            import_google_doc_tool(project_name="Alpha", session_id="test-session")
 
     def test_403_on_export_propagates(self, tmp_path, monkeypatch):
         self._setup(tmp_path, monkeypatch)
@@ -662,4 +732,4 @@ class TestImportGoogleDocPermissionDenied:
         monkeypatch.setattr(import_google_doc, "export_doc_html", _always_fail)
 
         with pytest.raises(PermissionDeniedError):
-            import_google_doc_tool(project_name="Alpha")
+            import_google_doc_tool(project_name="Alpha", session_id="test-session")

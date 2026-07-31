@@ -14,12 +14,16 @@ InkClerk's core workflow: AI edits land as drafts, the user reviews the diff, an
 
 3. If no filename was given, leave it blank — `import_google_doc` defaults to a slugified version of the Google Doc's title. Only ask about a subdirectory if the user mentions wanting the document nested somewhere inside the project.
 
-4. Call `import_google_doc(project_name=<project_name>, filename=<filename or "">, subdirectory=<subdirectory or "">)`. Let the user know this opens a browser window for Google sign-in and document picking.
+4. Call `import_google_doc(project_name=<project_name>, filename=<filename or "">, subdirectory=<subdirectory or "">)` with no `session_id`. It returns immediately with `session_id` and `sign_in_url` — remember `session_id` for step 5. Tell the user the `sign_in_url` right away and ask them to open it, sign in with Google, pick the document, and let you know once they're done. A browser may also open automatically, but don't rely on that — always give the user the link. Do not call the tool again until the user confirms they're done.
 
-5. Handle errors:
-   - `AUTH_REQUIRED`: the browser sign-in + Picker round didn't complete (missing configuration, it timed out, or the session expired before the user finished). Tell the user to complete it in their browser and retry the same call.
+5. Once the user confirms, call `import_google_doc(project_name=<project_name>, filename=<filename or "">, subdirectory=<subdirectory or "">, session_id=<session_id from step 4>)` to complete the import. This call does a short check and can take up to ~10 seconds.
+
+6. Handle errors:
+   - `AUTH_REQUIRED` from step 4 (missing configuration): report the error message.
+   - `AUTH_REQUIRED` from step 5, session **expired**: tell the user and restart from step 4 for a fresh link.
+   - `AUTH_REQUIRED` from step 5, sign-in **doesn't look complete yet**: ask the user to double-check they finished signing in and picking the document in the browser, then retry step 5 with the same `session_id` once they confirm again.
    - `PROJECT_NOT_FOUND` / `AMBIGUOUS_PROJECT_NAME`: ask the user to clarify the project name, optionally showing `list_projects()` output.
    - `FILE_ALREADY_EXISTS`: ask the user for a different filename, or confirm they want to pick a new one.
    - `PERMISSION_DENIED` / `GOOGLE_API_ERROR`: report the error message and ask the user to check their access to the Google Doc.
 
-6. On success, report the created document's `doc_path`. If the returned `dropped_styles` list is non-empty, list them as styles that could not be preserved; otherwise no need to mention it.
+7. On success, report the created document's `doc_path`. If the returned `dropped_styles` list is non-empty, list them as styles that could not be preserved; otherwise no need to mention it.

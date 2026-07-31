@@ -103,6 +103,7 @@ export default function ImportGoogleDoc() {
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       scope: DRIVE_FILE_SCOPE,
+      prompt: 'select_account',
       callback: (response) => {
         if (response.error || !response.access_token) {
           setStatus('error')
