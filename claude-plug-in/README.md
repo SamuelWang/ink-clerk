@@ -12,6 +12,11 @@ version.** See the root [`CLAUDE.md`](../CLAUDE.md) for the full project contrac
 - **Claude Code skills** (`skills/`): four `SKILL.md` files defining slash commands under the
   `inkclerk` namespace, each a 1:1 counterpart to one of the MCP prompts below.
 
+## Prerequisites
+
+Python ≥ 3.11 and [`uv`](https://docs.astral.sh/uv/). Google Docs import needs no per-user
+Google Cloud setup — authentication is brokered by the hosted `apps/web-api` relay.
+
 ## Directory structure
 
 ```
