@@ -20,7 +20,14 @@ export default function Layout() {
       <footer className="site-footer">
         <p>
           &copy; {new Date().getFullYear()} InkClerk &middot;{' '}
-          <a href="mailto:chieh0919@gmail.com">chieh0919@gmail.com</a>
+          <a href="mailto:chieh0919@gmail.com">chieh0919@gmail.com</a> &middot;{' '}
+          <a
+            href="https://github.com/SamuelWang/ink-clerk/issues/new"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Report an issue
+          </a>
         </p>
       </footer>
     </>
