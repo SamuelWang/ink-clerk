@@ -48,7 +48,10 @@ ink-clerk/
 │       └── uv.lock
 ├── claude-plug-in/                 # Claude Plug-in (MCP Servers + Claude Code skills)
 │   ├── mcp/                        # MCP server — tools, resources, and prompts (Python)
-│   │   ├── src/
+│   │   ├── tools/                  # projects.py, documents.py, drafts.py, import_google_doc.py
+│   │   ├── resources/              # resources.py — inkclerk:// URI dispatcher
+│   │   ├── prompts/                # prompts.py — MCP Prompts
+│   │   ├── shared/                 # fs.py, frontmatter.py, errors.py
 │   │   └── pyproject.toml
 │   └── skills/                     # Claude Code skill definitions (.md)
 ├── packages/

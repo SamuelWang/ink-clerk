@@ -10,8 +10,8 @@ The core UX contract: **AI edits land as drafts → user reviews the diff → us
 |---|---|---|
 | Desktop | `apps/desktop/` | Native app built with Tauri v2 + React. Drafts are stored locally in `.inkclerk/drafts/`. |
 | Web | `apps/web/` | React SPA. Uses `@inkclerk/editor` and `@inkclerk/ui`. |
-| Web API | `apps/web-api/` | FastAPI backend. Exposes `/projects`, `/files`, `/drafts`, and `/ai` endpoints. Stores drafts in PostgreSQL. |
-| Claude Plug-in | `claude-plug-in/` | MCP Server (tools, resources, prompts) and Claude Code skill definitions. |
+| Web API | `apps/web-api/` | FastAPI backend. In v0.1.0, only the `/import/google-doc` relay is live; `/projects`, `/files`, `/drafts`, and `/ai` endpoints (PostgreSQL-backed draft storage) land in Milestone 3. |
+| Claude Plug-in | `claude-plug-in/` | MCP Server (tools, resources, prompts) and Claude Code skill definitions. Installable now — dev install `claude --plugin-dir ./claude-plug-in`, or (pending marketplace approval) `/plugin install inkclerk@claude-community`. See [`claude-plug-in/README.md`](claude-plug-in/README.md). |
 
 ## Packages
 
@@ -38,3 +38,4 @@ The core UX contract: **AI edits land as drafts → user reviews the diff → us
 
 - [Architecture](docs/architecture.md) — repository structure, file layout, project/document identity, draft/accept workflow design
 - [Roadmap](docs/roadmap.md) — milestone plan from v0.1 (Claude Plug-in) through v0.5 (Sync)
+- [v0.1.0 Release Notes](docs/releases/v0.1.0.md) — what shipped in the Claude Plug-in milestone, install instructions, known gaps

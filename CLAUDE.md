@@ -88,4 +88,6 @@ MCP server (Python) exposing tools, resources, and prompts. Skill definitions ar
 
 ## Current Milestone
 
-**v0.1.0 — Claude Plug-in**: MCP server tools/resources/prompts + Claude Code skills + client-side Google Picker import flow (`apps/web` `/import/google-doc` page + `apps/web-api` `/import/google-doc` relay router, deployed on Render) + Google Docs import as markdown.
+**v0.1.0 — Claude Plug-in: shipped.** MCP server tools/resources/prompts + Claude Code skills + client-side Google Picker import flow (`apps/web` `/import/google-doc` page + `apps/web-api` `/import/google-doc` relay router, deployed on Render) + Google Docs import as markdown. See [`docs/releases/v0.1.0.md`](docs/releases/v0.1.0.md) for release notes and known follow-ups.
+
+Next up per `docs/roadmap.md`: **v0.2.0 — Claude Plug-in** (PDF import/export, Markdown → Google Docs export, static usage-manual pages for the CLI and Desktop App), still within Milestone 1. Milestone 2 (Desktop App) follows after.

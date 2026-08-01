@@ -4,13 +4,22 @@
 
 - Monorepo structure finalized
 
-## Milestone 1 — Claude Plug-in (v0.1.0)
+## Milestone 1 — Claude Plug-in
+
+### v0.1.0
 
 - Claude Plug-in sub-project initialized
 - MCP Server tools and resources completed
 - Skills completed
-- Hosted Google OAuth broker service (`apps/web-api` auth router) built and deployed
+- Client-side Google Picker (`apps/web`) + import relay (`apps/web-api`) built and deployed
 - Import Google Docs as a markdown document completed
+- Community marketplace submission completed
+
+### v0.2.0
+
+- Import a PDF file as a Markdown document, and export a Markdown document as a PDF file
+- Export a Markdown document as a Google Doc
+- Add static manual pages describing how to use the Claude Plug-in in the CLI and Desktop App
 
 ## Milestone 2 — Desktop App
 
